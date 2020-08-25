@@ -1,3 +1,5 @@
+[bits 16]
+
 ; Read N sectors from disk, using BIOS
 ; Arguments (Push order):
 ; Number of sectors to read (8 bits) [H]

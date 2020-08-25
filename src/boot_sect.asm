@@ -5,31 +5,27 @@ mov [BOOT_DRIVE], dl            ; BIOS stores the boot drive in dl
 mov bp, 0x8000
 mov sp, bp
 
-;push hex_data
-;push 4
-;call util_16bits_print_hex
+cli                             ; disables interrupts so we can go to protected mode
+lgdt [gdt_descriptor]           ; load the basic flat model GDT
+mov eax, cr0                    ; mov cr0 to eax
+or eax, 0x1                     ; set flag to switch to protected mode
+mov cr0, eax                    ; set cr0, effectively switching to 32-bit mode
+jmp GDT_CODE_SEG:init_pm        ; perform far-jump to clean the CPU pipeline
 
-mov ah, 0x02            ; read 2 sectors
-mov al, [BOOT_DRIVE]
-push ax
-mov ah, 0x0
-mov al, 0x2
-push ax
-mov ah, 0x0
-push ax
-push 0x9000
-call util_16bits_read_disk_sectors
+[bits 32]
+init_pm:
+mov ax, GDT_DATA_SEG            ; set all segment registers to GDT_DATA_SEG
+mov ds, ax
+mov ss, ax
+mov es, ax
+mov fs, ax
+mov gs, ax
 
-push 0x9000
-push 1024
-call util_16bits_print_hex
+mov ebp, 0x90000                ; now that we can address 32 bits, we update the stack position to be
+mov esp, ebp                    ; just under the extended BIOS data area
 
-;push hello_world_string
-;call util_16bits_print_string
-;add esp, 0x2
-;push hello_world_string2
-;call util_16bits_print_string
-;add esp, 0x2
+push switch_to_pm_msg
+call util_print_string
 
 jmp $
 
@@ -41,8 +37,12 @@ hello_world_string:
 db 'Hello World!', 0
 hello_world_string2:
 db 'Hello My Beautiful World!', 0
+switch_to_pm_msg:
+db 'Switched to protected mode!', 0
 
 %include "src/util_16bits.asm"
+%include "src/util.asm"
+%include "src/gdt.asm"
 
 times 510-($-$$) db 0
 
