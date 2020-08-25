@@ -8,7 +8,7 @@
 ; Sector number (8 bits) [L]
 ; Head number (8 bits) [H]
 ; Padding (8 bits) [L]
-; Buffer address (16 bits) [Note: caller needs to set ES register]
+; buffer address (16 bits) [note: caller needs to set es register]
 util_16bits_read_disk_sectors:
 push bp
 mov bp, sp
