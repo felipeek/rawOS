@@ -5,8 +5,10 @@ BUILD_DIR = ./bin
 
 # List of all .c source files.
 C = $(wildcard ./src/*.c)
+# List of all .asm source files.
+ASM = $(wildcard ./src/*.asm)
 # All .o files go to build dir.
-OBJ = $(C:%.c=$(BUILD_DIR)/%.o)
+OBJ = $(C:%.c=$(BUILD_DIR)/%.o) $(ASM:%.asm=$(BUILD_DIR)/%.o)
 # Gcc/Clang will create these .d files containing dependencies.
 DEP = $(OBJ:%.o=%.d)
 

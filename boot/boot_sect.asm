@@ -54,7 +54,7 @@ mov bp, sp
 
 push ax
 
-mov ah, 1                       ; Number of sectors to read
+mov ah, 4                       ; Number of sectors to read
 mov al, [BOOT_DRIVE]            ; Read from boot drive
 push ax
 mov ah, 0                       ; Track/cylinder number
