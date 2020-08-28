@@ -40,7 +40,7 @@ call KERNEL_OFFSET
 
 jmp $
 
-KERNEL_OFFSET equ 0x1000
+KERNEL_OFFSET equ 0x5000
 BOOT_DRIVE: db 0
 
 SWITCH_TO_PM_MSG: db 'Switched to protected mode!', 0
@@ -54,7 +54,8 @@ mov bp, sp
 
 push ax
 
-mov ah, 4                       ; Number of sectors to read
+mov ah, 17                      ; Number of sectors to read
+                                ; for now load all sectors that we can, for dev purposes
 mov al, [BOOT_DRIVE]            ; Read from boot drive
 push ax
 mov ah, 0                       ; Track/cylinder number

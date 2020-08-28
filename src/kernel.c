@@ -14,12 +14,18 @@ void print_logo(Screen* s) {
 "       ****    **** ****    ****   ********     ********   ************  \n"
 ;
 	screen_print(s, logo);
-	screen_print(s, "\n\nWelcome to rawOS!");
+	screen_print(s, "\n\nWelcome to rawOS!\n");
 }
+
+// Keep this dummy value to force image to be bigger.
+// Data is being stored at address 0x7000 and text at 0x5000, giving a 0x2000 delta between them.
+unsigned char dummy = 0xAB;
 
 void main() {
 	Screen s;
 	screen_init(&s);
 	screen_clear(&s);
 	print_logo(&s);
+	screen_print_ptr(&s, &dummy);
+	//screen_print_byte_in_hex(&s, dummy);
 }
