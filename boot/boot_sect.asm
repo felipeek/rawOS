@@ -40,7 +40,7 @@ call KERNEL_OFFSET
 
 jmp $
 
-KERNEL_OFFSET equ 0x5000
+KERNEL_OFFSET equ 0x1000
 BOOT_DRIVE: db 0
 
 SWITCH_TO_PM_MSG: db 'Switched to protected mode!', 0

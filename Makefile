@@ -33,7 +33,7 @@ $(BUILD_DIR)/boot_sect.bin : boot/boot_sect.asm
 
 # Linkage of the kernel
 $(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/src/kernel_entry.o $(OBJ)
-	ld -o $@ -Ttext 0x5000 -Tdata 0x7000 $^ --oformat binary -m elf_i386 -e main
+	ld -o $@ -Ttext 0x1000 -Tdata 0x3000 $^ --oformat binary -m elf_i386 -e main
 
 # Include all .d files
 -include $(DEP)

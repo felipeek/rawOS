@@ -18,7 +18,7 @@ void print_logo(Screen* s) {
 }
 
 // Keep this dummy value to force image to be bigger.
-// Data is being stored at address 0x7000 and text at 0x5000, giving a 0x2000 delta between them.
+// Data is being stored at address 0x3000 and text at 0x1000, giving a 0x2000 delta between them.
 unsigned char dummy = 0xAB;
 
 void main() {
