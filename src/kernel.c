@@ -3,8 +3,9 @@
 #include "screen.h"
 #include "interrupt.h"
 #include "common.h"
+#include "timer.h"
 
-void print_logo(Screen* s) {
+void print_logo() {
 	s8 logo[] =
 "       -----------     ------    ---      ---   --------   ------------  \n"
 "       ***********    ********   ***  **  ***  **********  ************  \n"
@@ -15,22 +16,18 @@ void print_logo(Screen* s) {
 "       ----   ----  ----    ----  ----------   ----------  ------------  \n"
 "       ****    **** ****    ****   ********     ********   ************  \n"
 ;
-	screen_print(s, logo);
-	screen_print(s, "\n\nWelcome to rawOS!\n");
+	screen_print(logo);
+	screen_print("\n\nWelcome to rawOS!\n");
 }
 
 // Keep this dummy value to force image to be bigger.
 // Data is being stored at address 0x3000 and text at 0x1000, giving a 0x2000 delta between them.
 u8 dummy = 0xAB;
 
-// For now, let the screen be global.
-Screen s;
-
 void main() {
-	screen_init(&s);
-	screen_clear(&s);
-	print_logo(&s);
-	//screen_print_byte_in_hex(&s, dummy);
-
-	idt_init();
+	interrupt_init();
+	timer_init();
+	screen_init();
+	screen_clear();
+	print_logo();
 }

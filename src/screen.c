@@ -9,40 +9,45 @@
 #define REG_SCREEN_CTRL 0x3D4
 #define REG_SCREEN_DATA 0x3D5
 
-// @TODO(fek): rewrite this temporary code
-static void screen_print_nibble(Screen* screen, u8 nibble) {
+typedef struct {
+    s32 cursor_pos;
+} Screen;
+
+static Screen screen;
+
+static void screen_print_nibble(u8 nibble) {
     u8 data[2];
     data[0] = nibble + '0';
     if (nibble > 9) {
         data[0] += 7;
     }
     data[1] = 0;
-    screen_print(screen, data);
+    screen_print(data);
 }
 
-void screen_print_byte(Screen* screen, u8 byte) {
-    screen_print_nibble(screen, byte >> 4);
-    screen_print_nibble(screen, byte & 0x0F);
+void screen_print_byte(u8 byte) {
+    screen_print_nibble(byte >> 4);
+    screen_print_nibble(byte & 0x0F);
 }
 
-void screen_print_u32(Screen* screen, u32 v) {
-    screen_print_byte(screen, v >> 24);
-    screen_print_byte(screen, v >> 16);
-    screen_print_byte(screen, v >> 8);
-    screen_print_byte(screen, v >> 0);
+void screen_print_u32(u32 v) {
+    screen_print_byte(v >> 24);
+    screen_print_byte(v >> 16);
+    screen_print_byte(v >> 8);
+    screen_print_byte(v >> 0);
 }
 
-void screen_print_ptr(Screen* screen, void* ptr) {
-    screen_print_u32(screen, (u32)ptr);
+void screen_print_ptr(void* ptr) {
+    screen_print_u32((u32)ptr);
 }
 
-static void update_text_cursor(Screen* screen) {
+static void update_text_cursor() {
     // Send 8 most-significant bytes of the cursor position
     io_byte_out(REG_SCREEN_CTRL, 0x0E);
-    io_byte_out(REG_SCREEN_DATA, screen->cursor_pos >> 8);
+    io_byte_out(REG_SCREEN_DATA, screen.cursor_pos >> 8);
     // Send 8 less-significant bytes of the cursor position
     io_byte_out(REG_SCREEN_CTRL, 0x0F);
-    io_byte_out(REG_SCREEN_DATA, screen->cursor_pos);
+    io_byte_out(REG_SCREEN_DATA, screen.cursor_pos);
 }
 
 // Prints a single character at the screen, in position <x, y>
@@ -52,8 +57,8 @@ static void print_at(s8 c, s32 y, s32 x) {
     video_memory[(y * VIDEO_COLS_NUM + x) * 2 + 1] = WHITE_ON_BLACK_ATTRIBUTE;
 }
 
-void screen_init(Screen* screen) {
-    screen->cursor_pos = 0;
+void screen_init() {
+    screen.cursor_pos = 0;
 
     // Configure text cursor
 
@@ -77,7 +82,7 @@ void screen_init(Screen* screen) {
 }
 
 // Shift all the content one line up, effectively losing the first line and creating space for a new line in the bottom
-static void shift_one_line_up(Screen* screen) {
+static void shift_one_line_up() {
     s8* video_memory = (s8*)VIDEO_MEMORY_ADDRESS;
     util_memcpy(video_memory, video_memory + VIDEO_COLS_NUM * 2, (VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM * 2);
     for (s32 i = 0; i < VIDEO_COLS_NUM; ++i) {
@@ -87,7 +92,7 @@ static void shift_one_line_up(Screen* screen) {
 }
 
 // Print a nul-terminated string to the screen, starting at the current cursor position
-void screen_print(Screen* screen, const s8* str) {
+void screen_print(const s8* str) {
     s8 c;
     s32 i = 0;
     while ((c = str[i]) != '\0') {
@@ -95,28 +100,28 @@ void screen_print(Screen* screen, const s8* str) {
 
         if (c == '\n') {
             // If the string has a \n, we artificially break the line
-            screen->cursor_pos += VIDEO_COLS_NUM - (screen->cursor_pos % VIDEO_COLS_NUM);
+            screen.cursor_pos += VIDEO_COLS_NUM - (screen.cursor_pos % VIDEO_COLS_NUM);
         } else {
             // In the common case, we just print the character to the 
-            s32 y = screen->cursor_pos / VIDEO_COLS_NUM;
-            s32 x = screen->cursor_pos % VIDEO_COLS_NUM;
+            s32 y = screen.cursor_pos / VIDEO_COLS_NUM;
+            s32 x = screen.cursor_pos % VIDEO_COLS_NUM;
             print_at(c, y, x);
-            ++screen->cursor_pos;
+            ++screen.cursor_pos;
         }
 
         // If we reached the end of the screen, we shift everything one line up
-        if (screen->cursor_pos >= VIDEO_COLS_NUM * VIDEO_ROWS_NUM) {
-            screen->cursor_pos -= VIDEO_COLS_NUM;
-            shift_one_line_up(screen);
+        if (screen.cursor_pos >= VIDEO_COLS_NUM * VIDEO_ROWS_NUM) {
+            screen.cursor_pos -= VIDEO_COLS_NUM;
+            shift_one_line_up();
         }
     }
 
     // Update the text cursor in the device
-    update_text_cursor(screen);
+    update_text_cursor();
 }
 
 // Clear the screen and reset the cursor position
-void screen_clear(Screen* screen) {
+void screen_clear() {
     s8* video_memory = (s8*)VIDEO_MEMORY_ADDRESS;
 
     for (s32 i = 0; i < VIDEO_COLS_NUM * VIDEO_ROWS_NUM; ++i) {
@@ -124,6 +129,6 @@ void screen_clear(Screen* screen) {
         video_memory[2 * i + 1] = 0xF;
     }
 
-    screen->cursor_pos = 0;
-    update_text_cursor(screen);
+    screen.cursor_pos = 0;
+    update_text_cursor();
 }

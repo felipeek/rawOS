@@ -3,6 +3,7 @@
 #include "screen.h"
 #include "asm/interrupt.h"
 #include "util.h"
+#include "timer.h"
 
 #define PIC1 0x20                   // IO port for master PIC
 #define PIC2 0xA0                   // IO port for slave PIC
@@ -32,6 +33,22 @@
 // 2 bits -> descriptor privilege level (00)
 // 5 bits -> 0D110. D specifies the size of the gate (1 = 32 bits, 0 = 16 bits). The others are mandatory to specify an Interrupt Gate
 #define IDT_INTERRUPT_GATE_FLAGS 0b10001110
+
+typedef struct __attribute__((packed)) {
+    u16 offset_low;
+    u16 selector;
+    u8 always0;
+    u8 flags;
+    u16 offset_high;
+} IDT_Descriptor;
+
+typedef struct __attribute__((packed)) {
+    IDT_Descriptor descriptors[IDT_SIZE];
+    u16 limit;
+    u32 base;
+} IDT;
+
+static Interrupt_Handler interrupt_handlers[IDT_SIZE];
 
 // Fill the IDT_Descriptor structure, following the x86 protocol
 static void idt_set_descriptor(IDT_Descriptor* idt_descriptor, u32 base, u16 selector, u8 flags) {
@@ -68,7 +85,7 @@ static void pic_remap() {
 
 // Creates the Interruption Descriptor Table, needed in x86
 // Also loads the table in the IDTR register and enables interrupts
-void idt_init() {
+void interrupt_init() {
     pic_remap();
 
     // We directly write the IDT to IDT_BASE address
@@ -140,20 +157,17 @@ void idt_init() {
     interrupt_enable();
 }
 
-typedef struct {
-   u32 edi, esi, ebp, esp, ebx, edx, ecx, eax;      // Pushed by pusha.
-   u32 int_no, err_code;                            // Interrupt number and error code (if applicable)
-   u32 eip, cs, eflags, useresp, ss;                // Pushed by the processor automatically.
-} ISR_Handler_Args; 
-
-extern Screen s;
-void isr_handler(ISR_Handler_Args args) {
-    screen_print_ptr(&s, "ISR Handler called: ");
-    screen_print_u32(&s, args.int_no);
-    screen_print(&s, "\n");
+void interrupt_register_handler(Interrupt_Handler interrupt_handler, u32 interrupt_number) {
+    interrupt_handlers[interrupt_number] = interrupt_handler;
 }
 
-void irq_handler(ISR_Handler_Args args) {
+void isr_handler(Interrupt_Handler_Args args) {
+    screen_print_ptr("ISR Handler called: ");
+    screen_print_u32(args.int_no);
+    screen_print("\n");
+}
+
+void irq_handler(Interrupt_Handler_Args args) {
     // Send an EOI (end of interrupt) signal to the PICs.
 
     // If this interrupt involved the slave.
@@ -164,7 +178,13 @@ void irq_handler(ISR_Handler_Args args) {
     // Notify master
     io_byte_out(PIC1, PIC_EOI);
 
-    screen_print(&s, "IRQ Handler called: ");
-    screen_print_u32(&s, args.int_no);
-    screen_print(&s, "\n");
+    Interrupt_Handler interrupt_handler = interrupt_handlers[args.int_no];
+
+    if (interrupt_handler) {
+        interrupt_handler(&args);
+    } else {
+        screen_print("IRQ Handler called for unhandled INT number: ");
+        screen_print_u32(args.int_no);
+        screen_print("\n");
+    }
 }
