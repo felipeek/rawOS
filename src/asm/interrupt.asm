@@ -29,13 +29,17 @@ global interrupt_disable
 %endmacro
 
 ; This code block is called by all ISRs. 
+; @TODO: Here, in this function, we will do the swap between user-space and kernel-space.
+; Currently, the GDT has only ring-0 segments, so we don't need to do it.
+; When we do it, we need to modify all segment registers (ds, es, fs, gs) to move to kernel-space
+; And restore them to the user-space segments before calling iret.
 isr_common_stub:
     pusha               ; Push all the registers to the stack, so the isr_handler can have access to them.
     call isr_handler    ; Call the high-level handler to handle the interruption
     popa                ; Clear the stack.
-    add esp, 8          ; ?
-    sti
-    iret
+    add esp, 8          ; Cleans up the pushed error code and pushed ISR number
+    sti                 ; re-enables interruptions
+    iret                ; return from interruption
 
 ; Create all needed ISRs, using the macros defined above
 ISR_NOERRCODE 0

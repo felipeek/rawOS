@@ -27,38 +27,40 @@ void idt_init() {
 
     // Set all IDT descriptors
     // Each IDT descriptor contain the pointer to its corresponding interrupt-handler routine
-    idt_set_descriptor(&idt->descriptors[0], (u32)interrupt_isr0, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[1], (u32)interrupt_isr1, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[2], (u32)interrupt_isr2, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[3], (u32)interrupt_isr3, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[4], (u32)interrupt_isr4, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[5], (u32)interrupt_isr5, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[6], (u32)interrupt_isr6, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[7], (u32)interrupt_isr7, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[8], (u32)interrupt_isr8, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[9], (u32)interrupt_isr9, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[10], (u32)interrupt_isr10, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[11], (u32)interrupt_isr11, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[12], (u32)interrupt_isr12, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[13], (u32)interrupt_isr13, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[14], (u32)interrupt_isr14, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[15], (u32)interrupt_isr15, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[16], (u32)interrupt_isr16, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[17], (u32)interrupt_isr17, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[18], (u32)interrupt_isr18, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[19], (u32)interrupt_isr19, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[20], (u32)interrupt_isr20, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[21], (u32)interrupt_isr21, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[22], (u32)interrupt_isr22, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[23], (u32)interrupt_isr23, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[24], (u32)interrupt_isr24, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[25], (u32)interrupt_isr25, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[26], (u32)interrupt_isr26, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[27], (u32)interrupt_isr27, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[28], (u32)interrupt_isr28, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[29], (u32)interrupt_isr29, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[30], (u32)interrupt_isr30, 0x08, 0x8E);
-    idt_set_descriptor(&idt->descriptors[31], (u32)interrupt_isr31, 0x08, 0x8E);
+    // @TODO: 0x08 specifies the segment selector to be used, 0x08 points to CODE_SEG in the current GDT.
+    // I think we need to define the GDT in C or create the GDT consts somewhere.
+    idt_set_descriptor(&idt->descriptors[0], (u32)interrupt_isr0, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[1], (u32)interrupt_isr1, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[2], (u32)interrupt_isr2, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[3], (u32)interrupt_isr3, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[4], (u32)interrupt_isr4, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[5], (u32)interrupt_isr5, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[6], (u32)interrupt_isr6, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[7], (u32)interrupt_isr7, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[8], (u32)interrupt_isr8, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[8], (u32)interrupt_isr8, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[10], (u32)interrupt_isr10, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[11], (u32)interrupt_isr11, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[12], (u32)interrupt_isr12, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[13], (u32)interrupt_isr13, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[14], (u32)interrupt_isr14, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[15], (u32)interrupt_isr15, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[16], (u32)interrupt_isr16, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[17], (u32)interrupt_isr17, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[18], (u32)interrupt_isr18, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[18], (u32)interrupt_isr18, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[20], (u32)interrupt_isr20, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[21], (u32)interrupt_isr21, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[22], (u32)interrupt_isr22, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[23], (u32)interrupt_isr23, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[24], (u32)interrupt_isr24, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[25], (u32)interrupt_isr25, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[26], (u32)interrupt_isr26, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[27], (u32)interrupt_isr27, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[28], (u32)interrupt_isr28, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[28], (u32)interrupt_isr28, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[30], (u32)interrupt_isr30, 0x08, IDT_INTERRUPT_GATE_FLAGS);
+    idt_set_descriptor(&idt->descriptors[31], (u32)interrupt_isr31, 0x08, IDT_INTERRUPT_GATE_FLAGS);
 
     // The total size of the descriptors
     u32 idt_descriptors_len = sizeof(IDT_Descriptor) * IDT_SIZE;
@@ -82,5 +84,5 @@ typedef struct {
 
 extern Screen s;
 void isr_handler(ISR_Handler_Args args) {
-    //screen_print_ptr(&s, &s);
+    screen_print_ptr(&s, &s);
 }
