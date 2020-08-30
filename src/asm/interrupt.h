@@ -1,0 +1,40 @@
+#ifndef RAW_OS_ASM_INTERRUPT_H
+#define RAW_OS_ASM_INTERRUPT_H
+#include "../common.h"
+
+void interrupt_disable();
+void interrupt_enable();
+void interrupt_idt_flush(u32 addr);
+void interrupt_isr0();
+void interrupt_isr1();
+void interrupt_isr2();
+void interrupt_isr3();
+void interrupt_isr4();
+void interrupt_isr5();
+void interrupt_isr6();
+void interrupt_isr7();
+void interrupt_isr8();
+void interrupt_isr9();
+void interrupt_isr10();
+void interrupt_isr11();
+void interrupt_isr12();
+void interrupt_isr13();
+void interrupt_isr14();
+void interrupt_isr15();
+void interrupt_isr16();
+void interrupt_isr17();
+void interrupt_isr18();
+void interrupt_isr19();
+void interrupt_isr20();
+void interrupt_isr21();
+void interrupt_isr22();
+void interrupt_isr23();
+void interrupt_isr24();
+void interrupt_isr25();
+void interrupt_isr26();
+void interrupt_isr27();
+void interrupt_isr28();
+void interrupt_isr29();
+void interrupt_isr30();
+void interrupt_isr31();
+#endif

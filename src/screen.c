@@ -1,5 +1,5 @@
 #include "screen.h"
-#include "io.h"
+#include "asm/io.h"
 #include "util.h"
 
 #define VIDEO_MEMORY_ADDRESS 0xB8000

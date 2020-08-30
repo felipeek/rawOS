@@ -6,7 +6,7 @@ BUILD_DIR = ./bin
 # List of all .c source files.
 C = $(wildcard ./src/*.c)
 # List of all .asm source files.
-ASM = $(wildcard ./src/*.asm)
+ASM = $(wildcard ./src/*.asm) $(wildcard ./src/asm/*.asm)
 # All .o files go to build dir.
 OBJ = $(C:%.c=$(BUILD_DIR)/%.o) $(ASM:%.asm=$(BUILD_DIR)/%.o)
 # Gcc/Clang will create these .d files containing dependencies.
@@ -32,7 +32,7 @@ $(BUILD_DIR)/boot_sect.bin : boot/boot_sect.asm
 	nasm $< -f bin -o $@
 
 # Linkage of the kernel
-$(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/src/kernel_entry.o $(OBJ)
+$(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/src/asm/kernel_entry.o $(OBJ)
 	ld -o $@ -Ttext 0x1000 -Tdata 0x3000 $^ --oformat binary -m elf_i386 -e main
 
 # Include all .d files
