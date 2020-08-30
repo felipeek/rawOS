@@ -24,12 +24,6 @@ void keyboard_interrupt_handler(const Interrupt_Handler_Args* args) {
     // Get the scancode from the Keyboard device.
     u8 scan_code = io_byte_in(KEYBOARD_DATA_PORT);
 
-    // When we receive an IRQ 1, we don't need to check the output buffer status in the status register
-    // However, just for learning purposes, I'm confirming it is 0 after the scancode is read.
-    status = io_byte_in(KEYBOARD_STATUS_REGISTER_PORT);
-    if (status & 0x01) {
-        screen_print("Error: Output buffer status is 1 after receiving the interrupt!");
-    }
     status = io_byte_in(KEYBOARD_STATUS_REGISTER_PORT);
 
     switch (scan_code) {
