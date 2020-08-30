@@ -14,7 +14,7 @@ static void timer_interrupt_handler(const Interrupt_Handler_Args* args) {
     static u32 tick = 0;
     tick++;
     if (tick % 100 == 0) {
-        screen_print("A second has passed.\n");
+        //screen_print("A second has passed.\n");
     }
 }
 

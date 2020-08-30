@@ -4,6 +4,7 @@
 #include "interrupt.h"
 #include "common.h"
 #include "timer.h"
+#include "keyboard.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -27,6 +28,7 @@ u8 dummy = 0xAB;
 void main() {
 	interrupt_init();
 	timer_init();
+	keyboard_init();
 	screen_init();
 	screen_clear();
 	print_logo();
