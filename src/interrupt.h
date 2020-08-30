@@ -3,7 +3,7 @@
 #include "common.h"
 
 #define IDT_BASE 0x00000000
-#define IDT_SIZE 256
+#define IDT_SIZE 47
 
 typedef struct __attribute__((packed)) {
     u16 offset_low;

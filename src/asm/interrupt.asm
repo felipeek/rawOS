@@ -1,4 +1,5 @@
 extern isr_handler
+extern irq_handler
 global interrupt_idt_flush
 global interrupt_enable
 global interrupt_disable
@@ -28,6 +29,15 @@ global interrupt_disable
         jmp isr_common_stub
 %endmacro
 
+%macro IRQ 2
+    global interrupt_irq%1
+    interrupt_irq%1:
+        cli
+        push byte 0
+        push byte %2
+        jmp irq_common_stub
+%endmacro
+
 ; This code block is called by all ISRs. 
 ; @TODO: Here, in this function, we will do the swap between user-space and kernel-space.
 ; Currently, the GDT has only ring-0 segments, so we don't need to do it.
@@ -36,6 +46,16 @@ global interrupt_disable
 isr_common_stub:
     pusha               ; Push all the registers to the stack, so the isr_handler can have access to them.
     call isr_handler    ; Call the high-level handler to handle the interruption
+    popa                ; Clear the stack.
+    add esp, 8          ; Cleans up the pushed error code and pushed ISR number
+    sti                 ; re-enables interruptions
+    iret                ; return from interruption
+
+; The irq_common_stub is identical to the isr_common_stub, the only difference is that we need to call the irq_handler.
+; We unfortunately need to differentiate them because in the case of IRQs we need to send an EOI to the PIC chips
+irq_common_stub:
+    pusha               ; Push all the registers to the stack, so the irq_handler can have access to them.
+    call irq_handler    ; Call the high-level handler to handle the interruption
     popa                ; Clear the stack.
     add esp, 8          ; Cleans up the pushed error code and pushed ISR number
     sti                 ; re-enables interruptions
@@ -74,6 +94,22 @@ ISR_NOERRCODE 28
 ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
+IRQ 0, 32
+IRQ 1, 33
+IRQ 2, 34
+IRQ 3, 35
+IRQ 4, 36
+IRQ 5, 37
+IRQ 6, 38
+IRQ 7, 39
+IRQ 8, 40
+IRQ 9, 41
+IRQ 10, 42
+IRQ 11, 43
+IRQ 12, 44
+IRQ 13, 45
+IRQ 14, 46
+IRQ 15, 47
 
 interrupt_idt_flush:
     mov eax, [esp + 4]

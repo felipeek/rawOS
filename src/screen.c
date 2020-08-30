@@ -10,8 +10,8 @@
 #define REG_SCREEN_DATA 0x3D5
 
 // @TODO(fek): rewrite this temporary code
-static void screen_print_nibble(Screen* screen, unsigned char nibble) {
-    unsigned char data[2];
+static void screen_print_nibble(Screen* screen, u8 nibble) {
+    u8 data[2];
     data[0] = nibble + '0';
     if (nibble > 9) {
         data[0] += 7;
@@ -20,17 +20,20 @@ static void screen_print_nibble(Screen* screen, unsigned char nibble) {
     screen_print(screen, data);
 }
 
-void screen_print_byte(Screen* screen, unsigned char byte) {
+void screen_print_byte(Screen* screen, u8 byte) {
     screen_print_nibble(screen, byte >> 4);
     screen_print_nibble(screen, byte & 0x0F);
 }
 
+void screen_print_u32(Screen* screen, u32 v) {
+    screen_print_byte(screen, v >> 24);
+    screen_print_byte(screen, v >> 16);
+    screen_print_byte(screen, v >> 8);
+    screen_print_byte(screen, v >> 0);
+}
+
 void screen_print_ptr(Screen* screen, void* ptr) {
-    unsigned int ptr_val = (unsigned int)ptr;
-    screen_print_byte(screen, ptr_val >> 24);
-    screen_print_byte(screen, ptr_val >> 16);
-    screen_print_byte(screen, ptr_val >> 8);
-    screen_print_byte(screen, ptr_val >> 0);
+    screen_print_u32(screen, (u32)ptr);
 }
 
 static void update_text_cursor(Screen* screen) {
@@ -43,7 +46,7 @@ static void update_text_cursor(Screen* screen) {
 }
 
 // Prints a single character at the screen, in position <x, y>
-static void print_at(char c, int y, int x) {
+static void print_at(s8 c, s32 y, s32 x) {
     char* video_memory = (char*)VIDEO_MEMORY_ADDRESS;
     video_memory[(y * VIDEO_COLS_NUM + x) * 2] = c;
     video_memory[(y * VIDEO_COLS_NUM + x) * 2 + 1] = WHITE_ON_BLACK_ATTRIBUTE;
@@ -75,18 +78,18 @@ void screen_init(Screen* screen) {
 
 // Shift all the content one line up, effectively losing the first line and creating space for a new line in the bottom
 static void shift_one_line_up(Screen* screen) {
-    char* video_memory = (char*)VIDEO_MEMORY_ADDRESS;
+    s8* video_memory = (s8*)VIDEO_MEMORY_ADDRESS;
     util_memcpy(video_memory, video_memory + VIDEO_COLS_NUM * 2, (VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM * 2);
-    for (int i = 0; i < VIDEO_COLS_NUM; ++i) {
+    for (s32 i = 0; i < VIDEO_COLS_NUM; ++i) {
         video_memory[2 * ((VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM + i)] = 0;
         video_memory[2 * ((VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM + i) + 1] = 0xF;
     }
 }
 
 // Print a nul-terminated string to the screen, starting at the current cursor position
-void screen_print(Screen* screen, const char* str) {
-    char c;
-    int i = 0;
+void screen_print(Screen* screen, const s8* str) {
+    s8 c;
+    s32 i = 0;
     while ((c = str[i]) != '\0') {
         ++i;
 
@@ -95,8 +98,8 @@ void screen_print(Screen* screen, const char* str) {
             screen->cursor_pos += VIDEO_COLS_NUM - (screen->cursor_pos % VIDEO_COLS_NUM);
         } else {
             // In the common case, we just print the character to the 
-            int y = screen->cursor_pos / VIDEO_COLS_NUM;
-            int x = screen->cursor_pos % VIDEO_COLS_NUM;
+            s32 y = screen->cursor_pos / VIDEO_COLS_NUM;
+            s32 x = screen->cursor_pos % VIDEO_COLS_NUM;
             print_at(c, y, x);
             ++screen->cursor_pos;
         }
@@ -114,9 +117,9 @@ void screen_print(Screen* screen, const char* str) {
 
 // Clear the screen and reset the cursor position
 void screen_clear(Screen* screen) {
-    char* video_memory = (char*)VIDEO_MEMORY_ADDRESS;
+    s8* video_memory = (s8*)VIDEO_MEMORY_ADDRESS;
 
-    for (int i = 0; i < VIDEO_COLS_NUM * VIDEO_ROWS_NUM; ++i) {
+    for (s32 i = 0; i < VIDEO_COLS_NUM * VIDEO_ROWS_NUM; ++i) {
         video_memory[2 * i] = 0;
         video_memory[2 * i + 1] = 0xF;
     }
