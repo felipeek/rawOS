@@ -54,7 +54,7 @@ mov bp, sp
 
 push ax
 
-mov ah, 17                      ; Number of sectors to read
+mov ah, 24                      ; Number of sectors to read
                                 ; for now load all sectors that we can, for dev purposes
 mov al, [BOOT_DRIVE]            ; Read from boot drive
 push ax
