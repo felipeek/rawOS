@@ -55,9 +55,9 @@
 #define IRQ15 47
 
 typedef struct {
-   u32 edi, esi, ebp, esp, ebx, edx, ecx, eax;      // Pushed by pusha.
-   u32 int_no, err_code;                            // Interrupt number and error code (if applicable)
-   u32 eip, cs, eflags, useresp, ss;                // Pushed by the processor automatically.
+	u32 edi, esi, ebp, esp, ebx, edx, ecx, eax;      // Pushed by pusha.
+	u32 int_no, err_code;                            // Interrupt number and error code (if applicable)
+	u32 eip, cs, eflags, useresp, ss;                // Pushed by the processor automatically.
 } Interrupt_Handler_Args;
 
 typedef void (*Interrupt_Handler)(const Interrupt_Handler_Args*);

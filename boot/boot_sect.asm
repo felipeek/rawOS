@@ -22,23 +22,23 @@ jmp GDT_CODE_SEG:init_pm        ; perform far-jump to clean the CPU pipeline
 
 [bits 32]
 init_pm:
-mov ax, GDT_DATA_SEG            ; set all segment registers to GDT_DATA_SEG
-mov ds, ax
-mov ss, ax
-mov es, ax
-mov fs, ax
-mov gs, ax
+	mov ax, GDT_DATA_SEG            ; set all segment registers to GDT_DATA_SEG
+	mov ds, ax
+	mov ss, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
 
-mov ebp, 0x90000                ; now that we can address 32 bits, we update the stack position to be
-mov esp, ebp                    ; just under the extended BIOS data area
+	mov ebp, 0x90000                ; now that we can address 32 bits, we update the stack position to be
+	mov esp, ebp                    ; just under the extended BIOS data area
 
-push SWITCH_TO_PM_MSG
-call util_print_string
-add esp, 4
+	push SWITCH_TO_PM_MSG
+	call util_print_string
+	add esp, 4
 
-call KERNEL_OFFSET
+	call KERNEL_OFFSET
 
-jmp $
+	jmp $
 
 KERNEL_OFFSET equ 0x1000
 BOOT_DRIVE: db 0
@@ -49,26 +49,26 @@ LOAD_KERNEL_MSG: db 'Loading kernel...', 0
 [bits 16]
 
 load_kernel:
-push bp
-mov bp, sp
+	push bp
+	mov bp, sp
 
-push ax
+	push ax
 
-mov ah, 24                      ; Number of sectors to read
-                                ; for now load all sectors that we can, for dev purposes
-mov al, [BOOT_DRIVE]            ; Read from boot drive
-push ax
-mov ah, 0                       ; Track/cylinder number
-mov al, 2                       ; Start at sector 2
-push ax
-push 0x0                        ; Head number + padding
-push KERNEL_OFFSET              ; Read sectors in this location
-call util_16bits_read_disk_sectors
-add esp, 8                      ; clear stack (cdecl-like)
+	mov ah, 24                      ; Number of sectors to read
+									; for now load all sectors that we can, for dev purposes
+	mov al, [BOOT_DRIVE]            ; Read from boot drive
+	push ax
+	mov ah, 0                       ; Track/cylinder number
+	mov al, 2                       ; Start at sector 2
+	push ax
+	push 0x0                        ; Head number + padding
+	push KERNEL_OFFSET              ; Read sectors in this location
+	call util_16bits_read_disk_sectors
+	add esp, 8                      ; clear stack (cdecl-like)
 
-pop ax
-pop bp
-ret
+	pop ax
+	pop bp
+	ret
 
 %include "boot/util_16bits.asm"
 %include "boot/util.asm"

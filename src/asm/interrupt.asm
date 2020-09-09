@@ -9,12 +9,12 @@ global interrupt_disable
 ; Note that the processor just calls the ISR without identifying the interruption,
 ; so we do need separate functions for each one.
 %macro ISR_NOERRCODE 1
-    global interrupt_isr%1
-    interrupt_isr%1:
-        cli
-        push byte 0
-        push byte %1
-        jmp isr_common_stub
+	global interrupt_isr%1
+	interrupt_isr%1:
+	cli
+	push byte 0
+	push byte %1
+	jmp isr_common_stub
 %endmacro
 
 ; Declare a common ISR for interruptions that PROVIDE an error code
@@ -22,20 +22,20 @@ global interrupt_disable
 ; Note that the processor just calls the ISR without identifying the interruption,
 ; so we do need separate functions for each one.
 %macro ISR_ERRCODE 1
-    global interrupt_isr%1
-    interrupt_isr%1:
-        cli
-        push byte %1
-        jmp isr_common_stub
+	global interrupt_isr%1
+	interrupt_isr%1:
+	cli
+	push byte %1
+	jmp isr_common_stub
 %endmacro
 
 %macro IRQ 2
-    global interrupt_irq%1
-    interrupt_irq%1:
-        cli
-        push byte 0
-        push byte %2
-        jmp irq_common_stub
+	global interrupt_irq%1
+	interrupt_irq%1:
+	cli
+	push byte 0
+	push byte %2
+	jmp irq_common_stub
 %endmacro
 
 ; This code block is called by all ISRs. 
@@ -44,22 +44,22 @@ global interrupt_disable
 ; When we do it, we need to modify all segment registers (ds, es, fs, gs) to move to kernel-space
 ; And restore them to the user-space segments before calling iret.
 isr_common_stub:
-    pusha               ; Push all the registers to the stack, so the isr_handler can have access to them.
-    call isr_handler    ; Call the high-level handler to handle the interruption
-    popa                ; Clear the stack.
-    add esp, 8          ; Cleans up the pushed error code and pushed ISR number
-    sti                 ; re-enables interruptions
-    iret                ; return from interruption
+	pusha               ; Push all the registers to the stack, so the isr_handler can have access to them.
+	call isr_handler    ; Call the high-level handler to handle the interruption
+	popa                ; Clear the stack.
+	add esp, 8          ; Cleans up the pushed error code and pushed ISR number
+	sti                 ; re-enables interruptions
+	iret                ; return from interruption
 
 ; The irq_common_stub is identical to the isr_common_stub, the only difference is that we need to call the irq_handler.
 ; We unfortunately need to differentiate them because in the case of IRQs we need to send an EOI to the PIC chips
 irq_common_stub:
-    pusha               ; Push all the registers to the stack, so the irq_handler can have access to them.
-    call irq_handler    ; Call the high-level handler to handle the interruption
-    popa                ; Clear the stack.
-    add esp, 8          ; Cleans up the pushed error code and pushed ISR number
-    sti                 ; re-enables interruptions
-    iret                ; return from interruption
+	pusha               ; Push all the registers to the stack, so the irq_handler can have access to them.
+	call irq_handler    ; Call the high-level handler to handle the interruption
+	popa                ; Clear the stack.
+	add esp, 8          ; Cleans up the pushed error code and pushed ISR number
+	sti                 ; re-enables interruptions
+	iret                ; return from interruption
 
 ; Create all needed ISRs, using the macros defined above
 ISR_NOERRCODE 0
@@ -112,14 +112,14 @@ IRQ 14, 46
 IRQ 15, 47
 
 interrupt_idt_flush:
-    mov eax, [esp + 4]
-    lidt [eax]
-    ret
+	mov eax, [esp + 4]
+	lidt [eax]
+	ret
 
 interrupt_disable:
-    cli
-    ret
+	cli
+	ret
 
 interrupt_enable:
-    sti
-    ret
+	sti
+	ret
