@@ -5,6 +5,7 @@
 #include "common.h"
 #include "timer.h"
 #include "keyboard.h"
+#include "paging.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -32,4 +33,6 @@ void main() {
 	screen_init();
 	screen_clear();
 	print_logo();
+	paging_init();
+	screen_print("Works like a charm :)");
 }

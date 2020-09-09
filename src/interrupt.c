@@ -180,6 +180,11 @@ void irq_handler(Interrupt_Handler_Args args) {
 
     Interrupt_Handler interrupt_handler = interrupt_handlers[args.int_no];
 
+    if (args.int_no == 14) {
+        screen_print("GOTCHA!\n");
+        while(1){}
+    }
+
     if (interrupt_handler) {
         interrupt_handler(&args);
     } else {
