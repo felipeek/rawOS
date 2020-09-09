@@ -2,6 +2,7 @@
 #include "kmalloc.h"
 #include "asm/paging.h"
 #include "util.h"
+#include "interrupt.h"
 
 #define PHYSICAL_RAM_SIZE 1024 * 1024 * 16 // 16mb for now
 #define AVAILABLE_FRAMES_NUM (PHYSICAL_RAM_SIZE / 8)
@@ -106,6 +107,30 @@ static void allocate_frame_to_page(Page_Entry* page_entry) {
 	page_entry->frame_address = allocd_frame;
 }
 
+// @TEMPORARY
+#include "screen.h"
+void page_fault_handler(const Interrupt_Handler_Args* args) {
+	u32 faulting_addr = paging_get_faulting_address();
+
+	// The error code gives us details of what happened.
+	int present = !(args->err_code & 0x1);   // Page not present
+	int rw = args->err_code & 0x2;           // Write operation?
+	int us = args->err_code & 0x4;           // Processor was in user-mode?
+	int reserved = args->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+	int id = args->err_code & 0x10;          // Caused by an instruction fetch?
+
+	// Output an error message.
+	screen_print("Page fault! ( ");
+	if (present) screen_print("present ");
+	if (rw) screen_print("read-only ");
+	if (us) screen_print("user-mode ");
+	if (reserved) screen_print("reserved ");
+	screen_print(") at 0x");
+	screen_print_u32(faulting_addr);
+	screen_print("\n");
+	util_panic("Page fault");
+}
+
 void paging_init() {
 	// We allocate a page_directory for the kernel.
 	Page_Directory* page_directory = kcalloc_aligned(sizeof(Page_Directory));
@@ -123,4 +148,6 @@ void paging_init() {
 
 	// Finally, we enable paging using the kernel page directory that we just created.
 	paging_switch_page_directory(page_directory->tables_x86_representation);
+
+	interrupt_register_handler(page_fault_handler, 14);
 }

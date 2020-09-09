@@ -34,5 +34,9 @@ void main() {
 	screen_clear();
 	print_logo();
 	paging_init();
-	screen_print("Works like a charm :)");
+	screen_print("Works like a charm :)\n");
+
+	// Force page fault
+	u8* invalid_addr = (u8*)0xA0000000;
+	u8 v = *invalid_addr;
 }

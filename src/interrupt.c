@@ -162,9 +162,15 @@ void interrupt_register_handler(Interrupt_Handler interrupt_handler, u32 interru
 }
 
 void isr_handler(Interrupt_Handler_Args args) {
-	screen_print_ptr("ISR Handler called: ");
-	screen_print_u32(args.int_no);
-	screen_print("\n");
+	Interrupt_Handler interrupt_handler = interrupt_handlers[args.int_no];
+
+	if (interrupt_handler) {
+		interrupt_handler(&args);
+	} else {
+		screen_print("ISR Handler called for unhandled INT number: ");
+		screen_print_u32(args.int_no);
+		screen_print("\n");
+	}
 }
 
 void irq_handler(Interrupt_Handler_Args args) {
@@ -179,11 +185,6 @@ void irq_handler(Interrupt_Handler_Args args) {
 	io_byte_out(PIC1, PIC_EOI);
 
 	Interrupt_Handler interrupt_handler = interrupt_handlers[args.int_no];
-
-	if (args.int_no == 14) {
-		screen_print("GOTCHA!\n");
-		while(1){}
-	}
 
 	if (interrupt_handler) {
 		interrupt_handler(&args);
