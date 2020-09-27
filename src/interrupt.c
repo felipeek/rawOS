@@ -2,7 +2,7 @@
 #include "asm/io.h"
 #include "screen.h"
 #include "asm/interrupt.h"
-#include "util.h"
+#include "util/util.h"
 #include "timer.h"
 
 #define PIC1 0x20                   // IO port for master PIC

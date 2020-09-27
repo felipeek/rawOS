@@ -1,6 +1,6 @@
 #include "screen.h"
 #include "asm/io.h"
-#include "util.h"
+#include "util/util.h"
 
 #define VIDEO_MEMORY_ADDRESS 0xB8000
 #define WHITE_ON_BLACK_ATTRIBUTE 0x0F

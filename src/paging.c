@@ -1,11 +1,12 @@
 #include "paging.h"
-#include "kmalloc.h"
+#include "alloc/kalloc_np.h"
 #include "asm/paging.h"
-#include "util.h"
+#include "util/util.h"
 #include "interrupt.h"
+#include "util/bitmap.h"
 
 #define PHYSICAL_RAM_SIZE 1024 * 1024 * 16 // 16mb for now
-#define AVAILABLE_FRAMES_NUM (PHYSICAL_RAM_SIZE / 8)
+#define AVAILABLE_FRAMES_NUM (PHYSICAL_RAM_SIZE / 0x1000)
 
 // Each x86 page has 4KB (default)
 // Each page table also has 4KB. Each page table entry occupies 4 bytes (32 bits). Therefore, a single page table can
@@ -41,40 +42,14 @@ typedef struct {
 	u32 tables_x86_representation[1024];
 } Page_Directory;
 
+unsigned char available_frames_bitmap_data[AVAILABLE_FRAMES_NUM / 8];
 typedef struct {
-	// A bitmap containing the state of all available frames.
-	// 0 = free
-	// 1 = in use
-	u32 available_frames[AVAILABLE_FRAMES_NUM];
+	Bitmap available_frames;
 } Paging;
 
 Paging paging;
 
 extern u32 kmalloc_addr;
-
-static void set_frame_used(u32 frame_num) {
-	u32 frame_bitmap_num = frame_num / 32;
-	u32 frame_bitmap_bit = frame_num % 32;
-	paging.available_frames[frame_bitmap_num] |= (1 << frame_bitmap_bit);
-}
-
-static void set_frame_available(u32 frame_num) {
-	u32 frame_bitmap_num = frame_num / 32;
-	u32 frame_bitmap_bit = frame_num % 32;
-	paging.available_frames[frame_bitmap_num] &= ~(1 << frame_bitmap_bit);
-}
-
-static u32 get_first_frame_available() {
-	for (u32 i = 0; i < AVAILABLE_FRAMES_NUM; ++i) {
-		for (u32 j = 0; j < 32; ++j) {
-			if (!(paging.available_frames[i] & (1 << j))) {
-				return i * 32 + j;
-			}
-		}
-	}
-
-	util_panic("No RAM available to get frame!");
-}
 
 static u32 frame_num_to_frame_addr(u32 frame_num) {
 	return frame_num << 12;
@@ -87,7 +62,7 @@ static Page_Entry* get_page(Page_Directory* page_directory, u32 page_num) {
 
 	if (!page_directory->tables[page_table_index]) {
 		// If the page table doesn't exist, we create it.
-		page_directory->tables[page_table_index] = kcalloc_aligned(sizeof(Page_Table));
+		page_directory->tables[page_table_index] = kcalloc_np_aligned(sizeof(Page_Table));
 		page_directory->tables_x86_representation[page_table_index] = (u32)(page_directory->tables[page_table_index]) | 0x7; // PRESENT, RW, US
 	}
 
@@ -99,8 +74,8 @@ static void allocate_frame_to_page(Page_Entry* page_entry) {
 	if (page_entry->frame_address) {
 		util_panic("trying to allocate frame for page that already has a frame assigned to it.");
 	}
-	u32 allocd_frame = get_first_frame_available();
-	set_frame_used(allocd_frame);
+	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
+	bitmap_set(&paging.available_frames, allocd_frame);
 	page_entry->present = 1;
 	page_entry->user_mode = 0;  // for now all frames are kernel frames
 	page_entry->writable = 1;   // for now all pages are writable
@@ -132,8 +107,10 @@ void page_fault_handler(const Interrupt_Handler_Args* args) {
 }
 
 void paging_init() {
+	bitmap_init(&paging.available_frames, available_frames_bitmap_data, AVAILABLE_FRAMES_NUM / 8);
+
 	// We allocate a page_directory for the kernel.
-	Page_Directory* page_directory = kcalloc_aligned(sizeof(Page_Directory));
+	Page_Directory* page_directory = kcalloc_np_aligned(sizeof(Page_Directory));
 
 	// Here, we create pages for all the kernel code and data that is currently in RAM.
 	// We use an identity map (VIRTUAL ADDRESS = PHYSICAL ADDRESS), meaning that the pages will point to frames with same address.
@@ -145,6 +122,8 @@ void paging_init() {
 		Page_Entry* page_entry = get_page(page_directory, page_num++);
 		allocate_frame_to_page(page_entry);
 	}
+
+	while(1){}
 
 	// Finally, we enable paging using the kernel page directory that we just created.
 	paging_switch_page_directory(page_directory->tables_x86_representation);
