@@ -16,7 +16,10 @@ all: rawOS
 
 # run rawOS, using QEMU emulator
 run: all
-	qemu-system-x86_64 -drive format=raw,file=bin/rawOS
+	qemu-system-x86_64 -drive format=raw,file=bin/rawOS -m 4G
+
+debug: all
+	qemu-system-x86_64 -s -S -drive format=raw,file=bin/rawOS -m 4G
 
 # see rawOS binary in hex
 hex: all

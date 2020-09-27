@@ -4,8 +4,16 @@
 #include "util/util.h"
 #include "interrupt.h"
 #include "util/bitmap.h"
+#include "screen.h"
 
-#define PHYSICAL_RAM_SIZE 1024 * 1024 * 16 // 16mb for now
+#define KERNEL_STACK_RESERVED_PAGES 128
+// We can only use 3GB of PHYSICAL_RAM_SIZE because of the 3GB barrier imposed by the hardware
+// https://en.wikipedia.org/wiki/3_GB_barrier
+#define PHYSICAL_RAM_SIZE 0xC0000000
+// The address in which the kernel stack is stored.
+// @NOTE: If this value is changed, we need to change in kernel_entry.asm aswell.
+// @TODO: Make both places consume the same constant
+#define KERNEL_STACK_ADDRESS 0xC0000000
 #define AVAILABLE_FRAMES_NUM (PHYSICAL_RAM_SIZE / 0x1000)
 
 // Each x86 page has 4KB (default)
@@ -64,6 +72,9 @@ static Page_Entry* get_page(Page_Directory* page_directory, u32 page_num) {
 		// If the page table doesn't exist, we create it.
 		page_directory->tables[page_table_index] = kcalloc_np_aligned(sizeof(Page_Table));
 		page_directory->tables_x86_representation[page_table_index] = (u32)(page_directory->tables[page_table_index]) | 0x7; // PRESENT, RW, US
+		screen_print("Allocating new table ");
+		screen_print_u32(page_table_index);
+		screen_print("\n");
 	}
 
 	return &page_directory->tables[page_table_index]->pages[page_num_within_table];
@@ -80,6 +91,21 @@ static void allocate_frame_to_page(Page_Entry* page_entry) {
 	page_entry->user_mode = 0;  // for now all frames are kernel frames
 	page_entry->writable = 1;   // for now all pages are writable
 	page_entry->frame_address = allocd_frame;
+}
+
+// Allocates a frame a given page
+static void allocate_specific_frame_to_page(Page_Entry* page_entry, u32 frame_num) {
+	util_assert("Trying to allocate specific frame, but it is already allocated.", bitmap_get(&paging.available_frames, frame_num) == 0);
+	bitmap_set(&paging.available_frames, frame_num);
+	page_entry->present = 1;
+	page_entry->user_mode = 0;  // for now all frames are kernel frames
+	page_entry->writable = 1;   // for now all pages are writable
+	page_entry->frame_address = frame_num;
+	//screen_print("Allocating new frame ");
+	//screen_print_u32(frame_num);
+	//screen_print(" (0x");
+	//screen_print_u32(frame_num * 0x1000);
+	//screen_print(")\n");
 }
 
 // @TEMPORARY
@@ -112,18 +138,37 @@ void paging_init() {
 	// We allocate a page_directory for the kernel.
 	Page_Directory* page_directory = kcalloc_np_aligned(sizeof(Page_Directory));
 
+	// First, we reserve N pages for the kernel stack (N is KERNEL_STACK_RESERVED_PAGES)
+	// We start at KERNEL_STACK_ADDRESS and go down.
+	for (u32 i = 0; i < KERNEL_STACK_RESERVED_PAGES; ++i) {
+		u32 page_num = (KERNEL_STACK_ADDRESS / 0x1000) - i;
+		Page_Entry* page_entry = get_page(page_directory, page_num);
+		allocate_specific_frame_to_page(page_entry, page_num);
+		++page_num;
+	}
+
+	// Here we perform an identity map on the video memory.
+	// In the future, we might wanna reserve another space in the kernel address space for the video memory.
+	for (u32 i = 0xA0000; i < 0xC0000; i += 0x1000) {
+		u32 page_num = i / 0x1000;
+		Page_Entry* page_entry = get_page(page_directory, page_num);
+		allocate_specific_frame_to_page(page_entry, page_num);
+		++page_num;
+	}
+
 	// Here, we create pages for all the kernel code and data that is currently in RAM.
 	// We use an identity map (VIRTUAL ADDRESS = PHYSICAL ADDRESS), meaning that the pages will point to frames with same address.
 	// Also note that 'allocate_frame_to_get_page' might need to allocate memory for the page tables.
 	// Because of this, 'kmalloc_addr' might change in the middle of the loop. We need to be sure that we are
 	// accounting for that, since all kmalloc/kcalloc'd stuff need to be part of the identity map.
-	u32 page_num = 0;
+	// @NOTE: If the kernel grows enough, this might invade the address space reserved for the video memory (see above)
+	// If this happens, we will need to change the virtual space reserved for the video memory, instead of performing an identity map.
 	for (u32 i = 0; i < kmalloc_addr; i += 0x1000) {
-		Page_Entry* page_entry = get_page(page_directory, page_num++);
-		allocate_frame_to_page(page_entry);
+		u32 page_num = i / 0x1000;
+		Page_Entry* page_entry = get_page(page_directory, page_num);
+		allocate_specific_frame_to_page(page_entry, page_num);
+		++page_num;
 	}
-
-	while(1){}
 
 	// Finally, we enable paging using the kernel page directory that we just created.
 	paging_switch_page_directory(page_directory->tables_x86_representation);

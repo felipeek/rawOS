@@ -11,5 +11,6 @@ void bitmap_init(Bitmap* bitmap, unsigned char* data, u32 size);
 void bitmap_set(Bitmap* bitmap, u32 index);
 void bitmap_clear(Bitmap* bitmap, u32 index);
 u32 bitmap_get_first_clear(const Bitmap* bitmap);
+u32 bitmap_get(const Bitmap* bitmap, u32 index);
 void bitmap_print(const Bitmap* bitmap);
 #endif
