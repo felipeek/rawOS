@@ -1,5 +1,5 @@
-#ifndef RAW_OS_KALLOC_H
-#define RAW_OS_KALLOC_H
+#ifndef RAW_OS_ALLOC_KALLOC_NP_H
+#define RAW_OS_ALLOC_KALLOC_NP_H
 #include "../common.h"
 
 // Util functions to allocate memory space for the kernel when paging is not enabled.

@@ -53,6 +53,7 @@ typedef struct {
 unsigned char available_frames_bitmap_data[AVAILABLE_FRAMES_NUM / 8];
 typedef struct {
 	Bitmap available_frames;
+	Page_Directory* page_directory;
 } Paging;
 
 Paging paging;
@@ -63,8 +64,17 @@ static u32 frame_num_to_frame_addr(u32 frame_num) {
 	return frame_num << 12;
 }
 
-// Gets a page from a page directory, creating a page table if necessary.
-static Page_Entry* get_page(Page_Directory* page_directory, u32 page_num) {
+static int page_exist(Page_Directory* page_directory, u32 page_num) {
+	u32 page_table_index = page_num / 1024;
+	u32 page_num_within_table = page_num % 1024;
+	if (page_directory->tables[page_table_index]) {
+		return page_directory->tables[page_table_index]->pages[page_num_within_table].present;
+	}
+	return 0;
+}
+
+// Create a page entry and returns it, creating a new page table if necessary.
+static Page_Entry* create_page(Page_Directory* page_directory, u32 page_num) {
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
@@ -77,7 +87,20 @@ static Page_Entry* get_page(Page_Directory* page_directory, u32 page_num) {
 		screen_print("\n");
 	}
 
-	return &page_directory->tables[page_table_index]->pages[page_num_within_table];
+	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
+	util_assert("Trying to create page that already exists!", !page_entry->present);
+	return page_entry;
+}
+
+// Gets a page from a page directory. The page must already exist.
+static Page_Entry* get_page(Page_Directory* page_directory, u32 page_num) {
+	u32 page_table_index = page_num / 1024;
+	u32 page_num_within_table = page_num % 1024;
+
+	util_assert("Trying to get a page from a table that is not created!", page_directory->tables[page_table_index] != 0);
+	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
+	util_assert("Trying to get a page that doesn't exist!", page_entry->present);
+	return page_entry;
 }
 
 // Allocates a frame a given page
@@ -101,16 +124,16 @@ static void allocate_specific_frame_to_page(Page_Entry* page_entry, u32 frame_nu
 	page_entry->user_mode = 0;  // for now all frames are kernel frames
 	page_entry->writable = 1;   // for now all pages are writable
 	page_entry->frame_address = frame_num;
-	//screen_print("Allocating new frame ");
-	//screen_print_u32(frame_num);
-	//screen_print(" (0x");
-	//screen_print_u32(frame_num * 0x1000);
-	//screen_print(")\n");
+}
+
+void paging_create_page_and_allocate_frame(u32 page_num) {
+	Page_Entry* page_entry = create_page(paging.page_directory, page_num);
+	allocate_frame_to_page(page_entry);
 }
 
 // @TEMPORARY
 #include "screen.h"
-void page_fault_handler(const Interrupt_Handler_Args* args) {
+static void page_fault_handler(const Interrupt_Handler_Args* args) {
 	u32 faulting_addr = paging_get_faulting_address();
 
 	// The error code gives us details of what happened.
@@ -136,13 +159,13 @@ void paging_init() {
 	bitmap_init(&paging.available_frames, available_frames_bitmap_data, AVAILABLE_FRAMES_NUM / 8);
 
 	// We allocate a page_directory for the kernel.
-	Page_Directory* page_directory = kcalloc_np_aligned(sizeof(Page_Directory));
+	paging.page_directory = kcalloc_np_aligned(sizeof(Page_Directory));
 
 	// First, we reserve N pages for the kernel stack (N is KERNEL_STACK_RESERVED_PAGES)
 	// We start at KERNEL_STACK_ADDRESS and go down.
 	for (u32 i = 0; i < KERNEL_STACK_RESERVED_PAGES; ++i) {
 		u32 page_num = (KERNEL_STACK_ADDRESS / 0x1000) - i;
-		Page_Entry* page_entry = get_page(page_directory, page_num);
+		Page_Entry* page_entry = create_page(paging.page_directory, page_num);
 		allocate_specific_frame_to_page(page_entry, page_num);
 		++page_num;
 	}
@@ -151,7 +174,7 @@ void paging_init() {
 	// In the future, we might wanna reserve another space in the kernel address space for the video memory.
 	for (u32 i = 0xA0000; i < 0xC0000; i += 0x1000) {
 		u32 page_num = i / 0x1000;
-		Page_Entry* page_entry = get_page(page_directory, page_num);
+		Page_Entry* page_entry = create_page(paging.page_directory, page_num);
 		allocate_specific_frame_to_page(page_entry, page_num);
 		++page_num;
 	}
@@ -165,13 +188,13 @@ void paging_init() {
 	// If this happens, we will need to change the virtual space reserved for the video memory, instead of performing an identity map.
 	for (u32 i = 0; i < kmalloc_addr; i += 0x1000) {
 		u32 page_num = i / 0x1000;
-		Page_Entry* page_entry = get_page(page_directory, page_num);
+		Page_Entry* page_entry = create_page(paging.page_directory, page_num);
 		allocate_specific_frame_to_page(page_entry, page_num);
 		++page_num;
 	}
 
 	// Finally, we enable paging using the kernel page directory that we just created.
-	paging_switch_page_directory(page_directory->tables_x86_representation);
+	paging_switch_page_directory(paging.page_directory->tables_x86_representation);
 
 	interrupt_register_handler(page_fault_handler, 14);
 }
