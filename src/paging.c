@@ -5,7 +5,7 @@
 #include "util/bitmap.h"
 #include "screen.h"
 
-#define KERNEL_STACK_RESERVED_PAGES 8
+#define KERNEL_STACK_RESERVED_PAGES 128
 // We can only use 3GB of PHYSICAL_RAM_SIZE because of the 3GB barrier imposed by the hardware
 // https://en.wikipedia.org/wiki/3_GB_barrier
 #define PHYSICAL_RAM_SIZE 0xC0000000
@@ -88,6 +88,30 @@ u32 final_kernel_code_data_addr = (u32)&end;
 /* PRE-PAGING FUNCTIONS */
 /* ******************** */
 
+static void create_pre_paging_mapping(u32 page_num, u32 frame_num);
+
+static void create_pre_paging_page_table(u32 page_table_index) {
+	// The page address. Serves for both virtual and physical address, since we are using an identity map.
+	u32 page_address = KERNEL_PAGE_TABLES_ADDRESS + page_table_index * 0x1000;
+	// The page number. Serves for both virtual and physical page, since we are using an identity map.
+	u32 page_num = page_address / 0x1000;
+	paging.page_directory->tables[page_table_index] = (Page_Table*)page_address;
+	paging.page_directory->tables_x86_representation[page_table_index] = (u32)(paging.page_directory->tables[page_table_index]) | 0x7; // PRESENT, RW, US
+
+	util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
+
+	// The new page table also needs a frame... In this case we call this function recursively, mapping the just configured
+	// virtual address to its corresponding physical address (they are equal)
+	// The recursive call will create the frame (i.e. set the bitmap and configure the page entry in the page table that
+	// will contain the frame of the page table that we are currently creating :))
+	// Note that we can have a recursive call with depth even more bigger.
+	create_pre_paging_mapping(page_num, page_num);
+
+	screen_print("Allocating new table ");
+	screen_print_u32(page_table_index);
+	screen_print("\n");
+}
+
 // THIS FUNCTION SHOULD ONLY BE USED BEFORE PAGING IS ENABLED.
 // This function maps a given page (page_num) to a given frame (frame_num).
 // The page entry and page table will be prepared for when paging is enabled.
@@ -105,25 +129,7 @@ static void create_pre_paging_mapping(u32 page_num, u32 frame_num) {
 	u32 page_num_within_table = page_num % 1024;
 
 	if (!paging.page_directory->tables[page_table_index]) {
-		// The page address. Serves for both virtual and physical address, since we are using an identity map.
-		u32 page_address = KERNEL_PAGE_TABLES_ADDRESS + page_table_index * 0x1000;
-		// The page number. Serves for both virtual and physical page, since we are using an identity map.
-		u32 page_num = page_address / 0x1000;
-		paging.page_directory->tables[page_table_index] = (Page_Table*)page_address;
-		paging.page_directory->tables_x86_representation[page_table_index] = (u32)(paging.page_directory->tables[page_table_index]) | 0x7; // PRESENT, RW, US
-
-		util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
-
-		// The new page table also needs a frame... In this case we call this function recursively, mapping the just configured
-		// virtual address to its corresponding physical address (they are equal)
-		// The recursive call will create the frame (i.e. set the bitmap and configure the page entry in the page table that
-		// will contain the frame of the page table that we are currently creating :))
-		// Note that we can have a recursive call with depth even more bigger.
-		create_pre_paging_mapping(page_num, page_num);
-
-		screen_print("Allocating new table ");
-		screen_print_u32(page_table_index);
-		screen_print("\n");
+		create_pre_paging_page_table(page_table_index);
 	}
 
 	Page_Entry* page_entry = &paging.page_directory->tables[page_table_index]->pages[page_num_within_table];
@@ -179,14 +185,14 @@ static u32 create_page_with_any_frame(u32 page_num) {
 		u32 virtual_page_address = KERNEL_PAGE_TABLES_ADDRESS + page_table_index * 0x1000;
 		u32 virtual_page_num = virtual_page_address / 0x1000;
 
-		u32 allocd_frame = create_page_with_any_frame(virtual_page_num);
-		
-		// The new page table also needs a frame. Calls this function recursively to get the frame.
 		paging.page_directory->tables[page_table_index] = (Page_Table*)virtual_page_address;
+		// The new page table also needs a frame. Calls this function recursively to get the frame.
+		// @NOTE: The key here is that we know for sure that the page table used to store 'virtual_page_num' will ALWAYS exist.
+		// This is because we always pre-allocate all page tables that may be used to store other page tables.
+		// For this reason, we don't need to worry about the same page-table being referenced multiple times during recursion.
+		u32 allocd_frame = create_page_with_any_frame(virtual_page_num);
 		paging.page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
-
-		// @TODO: Solve impossible problem
-		//util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
+		util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
 
 		screen_print("Allocating new table ");
 		screen_print_u32(page_table_index);
@@ -197,9 +203,6 @@ static u32 create_page_with_any_frame(u32 page_num) {
 	util_assert("Trying to create page that already exists!", !page_entry->present);
 
 	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
-	screen_print("allocd_frame: ");
-	screen_print_ptr((void*)allocd_frame);
-	screen_print("\n");
 	bitmap_set(&paging.available_frames, allocd_frame);
 	page_entry->present = 1;
 	page_entry->user_mode = 0;  // for now all frames are kernel frames
@@ -264,6 +267,29 @@ void paging_init() {
 	// We allocate a page_directory for the kernel.
 	paging.page_directory = reserve_pre_paging_aligned_space(sizeof(Page_Directory));
 
+	// First, we pre-allocate some necessary page-tables.
+	// We are basically allocating all the page-tables that may contain pages used by other page-tables.
+	// e.g. if our KERNEL_PAGE_TABLE_ADDRESS is 0x100000, then we know for sure that the page table virtual space will
+	// be reserved from 0x100000 to 0x500000.
+	// In this case, we know that all page tables from 0x100000 to 0x400000 will be stored as pages located in the
+	// page table 0, whereas all pages tables from 0x400000 to 0x500000 will be stored as pages located in the page table 1.
+	// So, we pre-allocate page-table 0 and 1.
+	// This is necessary to avoid an "chicken-and-egg" problem after paging is enabled. For example, let's say that we enable paging,
+	// but we didn't pre-allocate page-table 1. Then, we need to create a page that falls in page-table 1. In this case, we then try
+	// to allocate a page to store page table 1, but then we find out that the page table 1 page also falls in page table 1! In this
+	// case we are screwed, since we can never write to that page, because we don't have a virtual address to use.
+	util_assert("The virtual address of kernel page tables must be multiple of 0x1000", KERNEL_PAGE_TABLES_ADDRESS % 0x1000 == 0);
+	u32 first_page_table_index = (KERNEL_PAGE_TABLES_ADDRESS / 0x1000) / 1024;
+	u32 last_page_table_index = ((KERNEL_PAGE_TABLES_ADDRESS + 0x400000) / 0x1000) / 1024;
+	screen_print("Pre-creating page tables from ");
+	screen_print_u32(first_page_table_index);
+	screen_print(" to ");
+	screen_print_u32(last_page_table_index);
+	screen_print(".\n");
+	for (u32 i = first_page_table_index; i <= last_page_table_index; ++i) {
+		create_pre_paging_page_table(i);
+	}
+
 	// First, we reserve N pages for the kernel stack (N is KERNEL_STACK_RESERVED_PAGES)
 	// We start at KERNEL_STACK_ADDRESS and go down.
 	for (u32 i = 0; i < KERNEL_STACK_RESERVED_PAGES; ++i) {
@@ -298,9 +324,8 @@ void paging_init() {
 
 	interrupt_register_handler(page_fault_handler, 14);
 
-	//print_all_present_pages();
+	print_all_present_pages();
 
-	// 0x07867000
-	create_page_with_any_frame(0xABDE);
-	u8 a = *(u8*)0xABDF000;
+	//create_page_with_any_frame(0x4ABDF);
+	//u8 a = *(u8*)0x4ABDFFFF;
 }
