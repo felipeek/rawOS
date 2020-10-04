@@ -82,21 +82,12 @@ static void free_random_data(Kalloc_Heap* heap) {
 }
 
 void kalloc_test(Kalloc_Heap* empty_heap) {
-	#if 1
 	const u32 alloc_data_addr = 0x10000000;
 	for (u32 i = 0; i < 128; ++i) {
 		paging_create_page_with_any_frame(alloc_data_addr / 0x1000 + i);
 	}
-	screen_print("\n\n\n\n\n\n\n\n");
-	#else
-	u32 alloc_data_addr = kalloc_heap_alloc(empty_heap, 256 * 4096);
-	#endif
 	alloc_datas = (Allocd_Data*)alloc_data_addr;
 	alloc_datas_size = 0;
-
-	//kalloc_heap_alloc(empty_heap, 1 * 4096 + 4096);
-	//check_heap(empty_heap);
-	//while(1);
 
 	for (int i = 0; i < 2000; ++i) {
 		int r = rand() % 100;

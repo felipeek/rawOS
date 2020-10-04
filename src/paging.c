@@ -211,6 +211,18 @@ u32 paging_create_page_with_any_frame(u32 page_num) {
 	page_entry->user_mode = 0;  // for now all frames are kernel frames
 	page_entry->writable = 1;   // for now all pages are writable
 	page_entry->frame_address = allocd_frame;
+
+	// Double-check whether this frame is addressable!
+	// If we pick a physical page that is not addressable (because, for example, it is reserved for MMIO),
+	// then we will not be able to write to this page
+	// ... and it will be extremely hard to debug what is going on :)
+	u8* test = (u8*)(page_num * 0x1000);
+	*test = 0xAB;
+	//screen_print("Page: 0x");
+	//screen_print_u32(allocd_frame * 0x1000);
+	//screen_print("\n");
+	util_assert("A non-addressable frame was chosen!", *test == 0xAB);
+
 	return allocd_frame;
 }
 
@@ -320,6 +332,15 @@ void paging_init() {
 		u32 page_num = i / 0x1000;
 		create_pre_paging_mapping(page_num, page_num);
 		++page_num;
+	}
+
+	// @TEMPORARY: For now, let's pretend all frames below 0x100000 are used.
+	// This is to avoid using this frames later.
+	// Some of these frames are not addressable! So we avoid this issues.
+	// @TODO: Find a good documentation about x86 protected mode memory map and understand in detail
+	// which frames are reserved for MMIO, so we can treat them specially.
+	for (u32 i = 0; i < 0x100000; i += 0x1000) {
+		bitmap_set(&paging.available_frames, i / 0x1000);
 	}
 
 	// Finally, we enable paging using the kernel page directory that we just created.

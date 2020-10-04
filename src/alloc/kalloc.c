@@ -109,7 +109,6 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size) {
 			last_header->size += PAGE_SIZE;
 			kalloc_avl_insert(&heap->avl, last_header->size, last_header);
 		}
-
 		return kalloc_heap_alloc(heap, size);
 	}
 }
