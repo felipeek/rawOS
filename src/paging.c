@@ -177,7 +177,10 @@ static int page_exist(u32 page_num) {
 // This function creates a virtual page and allocates a frame to it.
 // Can only be called if the given virtual page is not being used.
 // Returns allocd frame
-static u32 create_page_with_any_frame(u32 page_num) {
+u32 paging_create_page_with_any_frame(u32 page_num) {
+	screen_print("allocating page num ");
+	screen_print_u32(page_num);
+	screen_print("\n");
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
@@ -190,7 +193,7 @@ static u32 create_page_with_any_frame(u32 page_num) {
 		// @NOTE: The key here is that we know for sure that the page table used to store 'virtual_page_num' will ALWAYS exist.
 		// This is because we always pre-allocate all page tables that may be used to store other page tables.
 		// For this reason, we don't need to worry about the same page-table being referenced multiple times during recursion.
-		u32 allocd_frame = create_page_with_any_frame(virtual_page_num);
+		u32 allocd_frame = paging_create_page_with_any_frame(virtual_page_num);
 		paging.page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
 		util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
 
@@ -324,7 +327,7 @@ void paging_init() {
 
 	interrupt_register_handler(page_fault_handler, 14);
 
-	print_all_present_pages();
+	//print_all_present_pages();
 
 	//create_page_with_any_frame(0x4ABDF);
 	//u8 a = *(u8*)0x4ABDFFFF;
