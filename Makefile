@@ -2,6 +2,7 @@ CC = gcc
 CFLAGS = -ffreestanding -m32 -fno-pie
 BIN = rawOS
 BUILD_DIR = ./bin
+RES_DIR = ./res
 
 # List of all .c source files.
 C = $(wildcard ./src/*.c) $(wildcard ./src/alloc/*.c) $(wildcard ./src/util/*.c)
@@ -30,7 +31,7 @@ rawOS: $(BUILD_DIR)/boot_sect.bin $(BUILD_DIR)/kernel.bin
 	cat $^ > $(BUILD_DIR)/$(BIN)
 
 # Compilation of the boot sector
-$(BUILD_DIR)/boot_sect.bin : boot/boot_sect.asm
+$(BUILD_DIR)/boot_sect.bin: boot/boot_sect.asm
 	mkdir -p $(@D)
 	nasm $< -f bin -o $@
 
@@ -38,6 +39,32 @@ $(BUILD_DIR)/boot_sect.bin : boot/boot_sect.asm
 $(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/src/asm/kernel_entry.o $(OBJ)
 	ld -o $@ -Tlink.ld $^ --oformat binary -m elf_i386 -e main
 	#ld -o $@ -Ttext 0x1000 -Tdata 0x3000 $^ --oformat binary -m elf_i386 -e main
+
+# ramdisk stuff
+
+initrd: $(BUILD_DIR)/ramdisk/writer
+	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/test /data/test
+
+read_initrd: $(BUILD_DIR)/ramdisk/reader
+	$(BUILD_DIR)/ramdisk/reader true
+
+$(BUILD_DIR)/ramdisk/writer: $(BUILD_DIR)/ramdisk/writer.o
+	mkdir -p $(@D)
+	$(CC) $< -o $@
+
+$(BUILD_DIR)/ramdisk/reader: $(BUILD_DIR)/ramdisk/reader.o
+	mkdir -p $(@D)
+	$(CC) $< -o $@
+
+$(BUILD_DIR)/ramdisk/writer.o: ramdisk/writer.c
+	mkdir -p $(@D)
+	$(CC) -c $< -o $@
+
+$(BUILD_DIR)/ramdisk/reader.o: ramdisk/reader.c
+	mkdir -p $(@D)
+	$(CC) -c $< -o $@
+
+######
 
 # Include all .d files
 -include $(DEP)
