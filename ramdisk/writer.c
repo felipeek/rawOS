@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
 #include "ramdisk.h"
-#include "light_array.h"
 
 /*
 	initrd format:
@@ -46,7 +46,7 @@ s32 main(s32 argc, s8** argv) {
 
 	fwrite(&num_files, sizeof(u32), 1, output_file);
 
-	Ramdisk_Header* headers = array_new(Ramdisk_Header);
+	Ramdisk_Header* headers = malloc(sizeof(Ramdisk_Header) * num_files);
 
 	for (u32 i = 0; i < num_files; ++i) {
 		Ramdisk_Header current_header;
@@ -61,7 +61,7 @@ s32 main(s32 argc, s8** argv) {
 		strcpy(current_header.file_name, argv[i * 2 + 2]);
 		fclose(file);
 
-		array_push(headers, current_header);
+		headers[i] = current_header;
 	}
 
 	fwrite(headers, sizeof(Ramdisk_Header), num_files, output_file);
@@ -84,6 +84,6 @@ s32 main(s32 argc, s8** argv) {
 	}
 
 	fclose(output_file);
-	array_free(headers);
+	free(headers);
 	return 0;
 }
