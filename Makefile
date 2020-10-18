@@ -5,11 +5,11 @@ BUILD_DIR = ./bin
 RES_DIR = ./res
 
 # List of all .c source files.
-C = $(wildcard ./src/*.c) $(wildcard ./src/alloc/*.c) $(wildcard ./src/util/*.c)
+C = $(wildcard ./src/*.c) $(wildcard ./src/alloc/*.c) $(wildcard ./src/util/*.c) $(wildcard ./src/fs/*.c)
 # List of all .asm source files.
 ASM = $(wildcard ./src/*.asm) $(wildcard ./src/asm/*.asm)
 # All .o files go to build dir.
-OBJ = $(C:%.c=$(BUILD_DIR)/%.o) $(ASM:%.asm=$(BUILD_DIR)/%.o)
+OBJ = $(C:%.c=$(BUILD_DIR)/%.o) $(ASM:%.asm=$(BUILD_DIR)/%.o) $(BUILD_DIR)/initrd.o
 # Gcc/Clang will create these .d files containing dependencies.
 DEP = $(OBJ:%.o=%.d)
 
@@ -42,8 +42,11 @@ $(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/src/asm/kernel_entry.o $(OBJ)
 
 # ramdisk stuff
 
-initrd: $(BUILD_DIR)/ramdisk/writer
-	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/test /data/test
+$(BUILD_DIR)/initrd.o: $(BUILD_DIR)/initrd.img
+	objcopy -B i386 -I binary -O elf32-i386 $^ $@
+
+$(BUILD_DIR)/initrd.img: $(BUILD_DIR)/ramdisk/writer
+	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/test test $(RES_DIR)/test2 test2
 
 read_initrd: $(BUILD_DIR)/ramdisk/reader
 	$(BUILD_DIR)/ramdisk/reader true

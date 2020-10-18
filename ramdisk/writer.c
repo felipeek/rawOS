@@ -24,10 +24,22 @@
 	fileN size: fileN content (N = number of files)
 */
 
-static void print_usage(s8* program_name) {
+static void print_usage(const s8* program_name) {
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "%s input_file_1 output_name_of_file_1_in_fs input_file_2 output_name_of_file_2_in_fs ... input_file_N output_name_of_file_N_in_fs\n", program_name);
 	fprintf(stderr, "example: %s ./my_file /data/my_file ./my_other_file /data/my_other_file\n", program_name);
+}
+
+static s32 file_is_not_in_root_folder(const s8* file_name) {
+	s32 i = 0;
+	while (file_name[i] != 0) {
+		if (file_name[i] == '/' || file_name[i] == '\\') {
+			return 1;
+		}
+		++i;
+	}
+
+	return 0;
 }
 
 s32 main(s32 argc, s8** argv) {
@@ -60,6 +72,11 @@ s32 main(s32 argc, s8** argv) {
 		current_header.file_size = ftell(file);
 		strcpy(current_header.file_name, argv[i * 2 + 2]);
 		fclose(file);
+
+		if (file_is_not_in_root_folder(current_header.file_name)) {
+			fprintf(stderr, "error: all files must be in the root folder (slashes are not allowed in the name)\n");
+			return 1;
+		}
 
 		headers[i] = current_header;
 	}

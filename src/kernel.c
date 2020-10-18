@@ -1,5 +1,3 @@
-// reminder: once the kernel hits 512 bytes in size we will need to load more sectors.
-// @TODO: fix this in QEMU
 #include "screen.h"
 #include "interrupt.h"
 #include "common.h"
@@ -8,6 +6,8 @@
 #include "paging.h"
 #include "alloc/kalloc.h"
 #include "alloc/kalloc_test.h"
+#include "fs/vfs.h"
+#include "fs/initrd.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -24,9 +24,32 @@ void print_logo() {
 	screen_print("\n\nWelcome to rawOS!\n");
 }
 
-// Keep this dummy value to force image to be bigger.
-// Data is being stored at address 0x3000 and text at 0x1000, giving a 0x2000 delta between them.
-u8 dummy = 0xAB;
+void read_folder(Vfs_Node* folder_node) {
+	Vfs_Dirent dirent;
+	s32 index = 0;
+	while (!vfs_readdir(folder_node, index++, &dirent)) {
+		screen_print("Found file: ");
+		screen_print(dirent.name);
+		screen_print("\n");
+
+		Vfs_Node* node = vfs_lookup(folder_node, dirent.name);
+
+		screen_print("Content: ");
+
+		const u32 buffer_size = 64;
+		u8 buffer[buffer_size];
+		s32 offset = 0;
+		s32 read;
+
+		while(read = vfs_read(node, offset, buffer_size - 1, buffer)) {
+			offset += read;
+			buffer[read] = 0;
+			screen_print(buffer);
+		}
+
+		screen_print("\n");
+	}
+}
 
 void main() {
 	interrupt_init();
@@ -38,11 +61,10 @@ void main() {
 	paging_init();
 	screen_print("Works like a charm :)\n");
 
-	Kalloc_Heap heap;
-	kalloc_heap_create(&heap, 0x00500000, 1);
-	kalloc_heap_print(&heap);
+	kalloc_init(1);
 
-	kalloc_test(&heap);
+	Vfs_Node* fs = initrd_init();
+	read_folder(fs);
 
 	//u8* a = kalloc_heap_alloc(&heap, 4 * 4096 + 1);
 	//*(a + 4 * 4096) = 0xAB;

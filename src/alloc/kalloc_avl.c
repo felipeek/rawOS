@@ -1,6 +1,5 @@
 #include "kalloc_avl.h"
 #include "../util/util.h"
-#define MAX(x, y) (x > y ? x : y)
 
 // Compare the size of two holes.
 static int compare_hole_size(u32 s1, u32 s2) {
