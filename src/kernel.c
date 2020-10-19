@@ -8,6 +8,7 @@
 #include "alloc/kalloc_test.h"
 #include "fs/vfs.h"
 #include "fs/initrd.h"
+#include "util/printf.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -62,6 +63,12 @@ void main() {
 	screen_print("Works like a charm :)\n");
 
 	kalloc_init(1);
+	catstring s = {0};
+	int hello = catsprint(&s, "hello world %d %s\n\0", -45, "hello");
+	//screen_print(s.data);
+	//u8 buffer[32] = {0};
+    //u32_to_str(45, (char*)buffer);
+	screen_print(s.data);
 
 	Vfs_Node* fs = initrd_init();
 	read_folder(fs);
