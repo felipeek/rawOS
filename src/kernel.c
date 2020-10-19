@@ -62,9 +62,13 @@ void main() {
 	paging_init();
 	screen_print("Works like a charm :)\n");
 
+	//screen_print("MAIN: ");
+	//screen_print_ptr(main);
+	//while(1);
+
 	kalloc_init(1);
 	catstring s = {0};
-	int hello = catsprint(&s, "hello world %d %s\n\0", -45, "hello");
+	int hello = catsprint(&s, "hello world %d\n\0", 45);
 	//screen_print(s.data);
 	//u8 buffer[32] = {0};
     //u32_to_str(45, (char*)buffer);
