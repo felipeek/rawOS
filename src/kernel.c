@@ -7,7 +7,12 @@
 #include "alloc/kalloc.h"
 #include "alloc/kalloc_test.h"
 #include "fs/vfs.h"
+<<<<<<< HEAD
 #include "util/printf.h"
+=======
+#include "fs/initrd.h"
+#include "util/util.h"
+>>>>>>> master
 
 #include "fs/initrd.h"
 void print_logo() {
@@ -35,6 +40,8 @@ void read_folder(Vfs_Node* folder_node) {
 		screen_print("\n");
 
 		Vfs_Node* node = vfs_lookup(folder_node, dirent.name);
+		util_assert("node is null, but it can't be!", node);
+
 		screen_print("Content: ");
 
 		const u32 buffer_size = 64;
@@ -42,7 +49,7 @@ void read_folder(Vfs_Node* folder_node) {
 		s32 offset = 0;
 		s32 read;
 
-		while(read = vfs_read(node, offset, buffer_size - 1, buffer)) {
+		while (read = vfs_read(node, offset, buffer_size - 1, buffer)) {
 			offset += read;
 			buffer[read] = 0;
 			screen_print(buffer);
