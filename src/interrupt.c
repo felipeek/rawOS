@@ -167,7 +167,9 @@ void isr_handler(Interrupt_Handler_Args args) {
 	if (interrupt_handler) {
 		interrupt_handler(&args);
 	} else {
-		printf("ISR Handler called for unhandled INT number: %u\n", args.int_no);
+		screen_print("ISR Handler called for unhandled INT number: ");
+		screen_print_u32(args.int_no);
+		screen_print("\n");
 	}
 }
 
@@ -187,6 +189,8 @@ void irq_handler(Interrupt_Handler_Args args) {
 	if (interrupt_handler) {
 		interrupt_handler(&args);
 	} else {
-		printf("IRQ Handler called for unhandled INT number: %u\n", args.int_no);
+		screen_print("IRQ Handler called for unhandled INT number: ");
+		screen_print_u32(args.int_no);
+		screen_print("\n");
 	}
 }

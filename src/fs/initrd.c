@@ -16,7 +16,7 @@ static u8** initrd_files_data;
 static Vfs_Node* initrd_root_node;
 static Vfs_Node* initrd_files_nodes;
 
-s32 initrd_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf) {
+static s32 initrd_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf) {
 	if (offset >= vfs_node->size) {
 		return 0;
 	}
