@@ -339,6 +339,8 @@ catsprint_list(catstring* buffer, char* str, rawos_va_list args)
     buffer->data = kalloc_alloc(32);
     buffer->capacity = 32;
   }
+  int XXX = 0;
+
   int len = 0;
   for (char *at = str;;)
   {
@@ -355,13 +357,67 @@ catsprint_list(catstring* buffer, char* str, rawos_va_list args)
       at++;                     // skip
       switch (*at)
       {
+        case '%':{
+          // just push character
+          buffer->data[buffer->length] = *at;
+          if (!(*at))
+            break;
+          buffer->length++;
+          len++;
+          at++;
+        } break;
+        case 's':{
+          at++;
+          if (*at == '+')
+          {
+            at++;
+            int length = rawos_va_arg(args, int);
+            // push string
+            n = catsprint_string_length(buffer, rawos_va_arg(args, const char *), length);
+          }
+          else if (*at == '*')
+          {
+            at++;
+            int length = rawos_va_arg(args, int);
+            // push string
+            n = catsprint_string_length_escaped(buffer, rawos_va_arg(args, const char *), length);
+          }
+          else
+          {
+            // push string
+            n = catsprint_string(buffer, rawos_va_arg(args, const char *));
+          }
+        } break;
+        case 'u':{
+          at++;
+          n = catsprint_decimal_unsigned(buffer, rawos_va_arg(args, u32));
+        } break;
         case 'd':{
           at++;
           n = catsprint_decimal_signed(buffer, rawos_va_arg(args, int));
         } break;
+        case 'x':{
+          at++;
+          n = catsprint_hexadecimal(buffer, rawos_va_arg(args, u32));
+        } break;
+        case 'f':{
+          at++;
+          n = catsprint_double(buffer, rawos_va_arg(args, double));
+        } break;
       }
       len += n;
-    } else {
+    }
+    else if(*at == '\\' && at[1] == '0')
+    {
+      buffer->data[buffer->length] = 0;
+      if (!(*at))
+        break;
+      buffer->length++;
+      len++;
+      at+=2;
+    }
+    else
+    {
       buffer->data[buffer->length] = *at;
       if (!(*at))
         break;
@@ -369,10 +425,9 @@ catsprint_list(catstring* buffer, char* str, rawos_va_list args)
       len++;
       at++;
     }
-
   }
 
-  return 0;
+  return XXX;
 }
 
 int func_c(int a, s8* x) {
