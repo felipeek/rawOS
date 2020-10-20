@@ -65,8 +65,6 @@ u32_to_str(u32 val, u8* buffer) {
 
 int
 s32_to_str(s32 val, u8* buffer) {
-	screen_print("S32_to_STR: ");
-	screen_print_ptr(s32_to_str);
     u8 b[32] = {0};
     s32 sum = 0;
 
@@ -398,8 +396,6 @@ catsprint(catstring* buffer, char* str, ...)
   rawos_va_list args;
   rawos_va_start(args, str);
 
-	//screen_print("My address is: ");
-	//screen_print_ptr(catsprint);
   int l = catsprint_list(buffer, str, args);
 
   rawos_va_end(args);

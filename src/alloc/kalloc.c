@@ -23,3 +23,7 @@ void* kalloc_realloc(void* ptr, u32 old_size, u32 new_size) {
 	kalloc_free(ptr);
 	return mem;
 }
+
+void kalloc_print() {
+	kalloc_print(&heap);
+}

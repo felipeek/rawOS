@@ -20,6 +20,9 @@ typedef struct {
 	Kalloc_Heap_Header* header;
 } Kalloc_Heap_Footer;
 
+#define COMPLEX_HEAP_ENABLED
+
+#ifdef COMPLEX_HEAP_ENABLED
 void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) {
 	util_assert("kalloc: initial address must be page-alinged", initial_addr % 0x1000 == 0);
 	util_assert("kalloc: insufficient number of initial pages", initial_pages * PAGE_SIZE >= sizeof(Kalloc_Heap_Footer) + sizeof(Kalloc_Heap_Header));
@@ -175,3 +178,24 @@ void kalloc_heap_print(const Kalloc_Heap* heap) {
 	}
 	screen_print("******\n");
 }
+#else
+#define KERNEL_PAGES 100
+u32 k_addr;
+void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) {
+	for (int i = 0; i < KERNEL_PAGES; ++i) {
+		paging_create_page_with_any_frame(initial_addr / PAGE_SIZE + i);
+	}
+	k_addr = initial_addr;
+}
+
+void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size) {
+	k_addr += size;
+	return k_addr - size;
+}
+
+void kalloc_heap_free(Kalloc_Heap* heap, void* ptr) {
+}
+
+void kalloc_heap_print(const Kalloc_Heap* heap) {
+}
+#endif

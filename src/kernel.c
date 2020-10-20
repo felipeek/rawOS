@@ -7,9 +7,9 @@
 #include "alloc/kalloc.h"
 #include "alloc/kalloc_test.h"
 #include "fs/vfs.h"
-#include "fs/initrd.h"
 #include "util/printf.h"
 
+#include "fs/initrd.h"
 void print_logo() {
 	s8 logo[] =
 "       -----------     ------    ---      ---   --------   ------------  \n"
@@ -25,6 +25,7 @@ void print_logo() {
 	screen_print("\n\nWelcome to rawOS!\n");
 }
 
+s32 initrd_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf);
 void read_folder(Vfs_Node* folder_node) {
 	Vfs_Dirent dirent;
 	s32 index = 0;
@@ -34,7 +35,6 @@ void read_folder(Vfs_Node* folder_node) {
 		screen_print("\n");
 
 		Vfs_Node* node = vfs_lookup(folder_node, dirent.name);
-
 		screen_print("Content: ");
 
 		const u32 buffer_size = 64;
@@ -52,6 +52,7 @@ void read_folder(Vfs_Node* folder_node) {
 	}
 }
 
+
 void main() {
 	interrupt_init();
 	timer_init();
@@ -62,16 +63,9 @@ void main() {
 	paging_init();
 	screen_print("Works like a charm :)\n");
 
-	//screen_print("MAIN: ");
-	//screen_print_ptr(main);
-	//while(1);
-
 	kalloc_init(1);
 	catstring s = {0};
-	int hello = catsprint(&s, "hello world %d\n\0", 45);
-	//screen_print(s.data);
-	//u8 buffer[32] = {0};
-    //u32_to_str(45, (char*)buffer);
+	int hello = catsprint(&s, "hello world %d %d %s %f %f\n\0", 45, 23124, "ASJDPASJDPASJDPAS", 34.3144, 3214.44);
 	screen_print(s.data);
 
 	Vfs_Node* fs = initrd_init();

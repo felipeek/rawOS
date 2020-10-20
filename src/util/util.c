@@ -7,6 +7,7 @@ void util_strcpy(s8* dst, const s8* src) {
 		dst[i] = src[i];
 		++i;
 	}
+	dst[i] = 0;
 }
 
 // For now implementation differs a bit from the CRT.
