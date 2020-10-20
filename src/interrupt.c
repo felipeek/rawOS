@@ -2,8 +2,8 @@
 #include "asm/io.h"
 #include "util/printf.h"
 #include "asm/interrupt.h"
-#include "util/util.h"
 #include "timer.h"
+#include "screen.h"
 
 #define PIC1 0x20                   // IO port for master PIC
 #define PIC2 0xA0                   // IO port for slave PIC
