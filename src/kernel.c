@@ -7,12 +7,9 @@
 #include "alloc/kalloc.h"
 #include "alloc/kalloc_test.h"
 #include "fs/vfs.h"
-<<<<<<< HEAD
 #include "util/printf.h"
-=======
 #include "fs/initrd.h"
 #include "util/util.h"
->>>>>>> master
 
 #include "fs/initrd.h"
 void print_logo() {
