@@ -7,4 +7,6 @@
 void kalloc_init(u32 initial_pages);
 void* kalloc_alloc(u32 size);
 void kalloc_free(void* ptr);
+void* kalloc_realloc(void* ptr, u32 old_size, u32 new_size);
+void kalloc_print();
 #endif

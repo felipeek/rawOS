@@ -8,7 +8,9 @@
 #include "alloc/kalloc_test.h"
 #include "fs/vfs.h"
 #include "fs/initrd.h"
+#include "util/printf.h"
 #include "util/util.h"
+#include "util/printf.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -21,23 +23,20 @@ void print_logo() {
 "       ----   ----  ----    ----  ----------   ----------  ------------  \n"
 "       ****    **** ****    ****   ********     ********   ************  \n"
 ;
-	screen_print(logo);
-	screen_print("\n\nWelcome to rawOS!\n");
+	printf(logo);
+	printf("\n\nWelcome to rawOS!\n");
 }
 
 void read_folder(Vfs_Node* folder_node) {
 	Vfs_Dirent dirent;
 	s32 index = 0;
 	while (!vfs_readdir(folder_node, index++, &dirent)) {
-		screen_print("Found file: ");
-		screen_print(dirent.name);
-		screen_print("\n");
+		printf("Found file: %s\n", dirent.name);
 
 		Vfs_Node* node = vfs_lookup(folder_node, dirent.name);
+		util_assert("node is null, but it can't be!", node != 0);
 
-		util_assert("node is null, but it can't be!", node);
-
-		screen_print("Content: ");
+		printf("Content: ");
 
 		const u32 buffer_size = 64;
 		u8 buffer[buffer_size];
@@ -47,40 +46,33 @@ void read_folder(Vfs_Node* folder_node) {
 		while (read = vfs_read(node, offset, buffer_size - 1, buffer)) {
 			offset += read;
 			buffer[read] = 0;
-			screen_print(buffer);
+			printf("%s", buffer);
 		}
 
-		screen_print("\n");
+		printf("\n");
 	}
 }
 
+
 void main() {
-	interrupt_init();
 	timer_init();
-	keyboard_init();
+	paging_init();
 	screen_init();
 	screen_clear();
-	print_logo();
-	paging_init();
-	screen_print("Works like a charm :)\n");
-
 	kalloc_init(1);
+
+	print_logo();
+
+	interrupt_init();
+	keyboard_init();
+	printf("Works like a charm :)\n");
 
 	Vfs_Node* fs = initrd_init();
 	read_folder(fs);
 
-	//u8* a = kalloc_heap_alloc(&heap, 4 * 4096 + 1);
-	//*(a + 4 * 4096) = 0xAB;
-	//screen_print("Got ptr: ");
-	//screen_print_ptr(a);
-	//screen_print("\n");
-	//screen_print("And value: ");
-	//screen_print_byte(*(a + 4 * 4096));
-	//screen_print("\n\n");
-
 	//kalloc_heap_print(&heap);
 
 	// Force page fault
-	u8* invalid_addr = (u8*)0xA0000000;
-	u8 v = *invalid_addr;
+	//u8* invalid_addr = (u8*)0xA0000000;
+	//u8 v = *invalid_addr;
 }
