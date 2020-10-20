@@ -1,5 +1,4 @@
 #include "initrd.h"
-#include "../screen.h"
 #include "../alloc/kalloc.h"
 #include "../util/util.h"
 

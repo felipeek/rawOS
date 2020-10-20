@@ -24,7 +24,7 @@ s32 util_strcmp(const s8* s1, const s8* s2) {
 	return !(s1[i] == 0 && s2[i] == 0);
 }
 
-void util_memcpy(void* dst, void* src, u32 size) {
+void util_memcpy(void* dst, const void* src, u32 size) {
 	for (u32 i = 0; i < size; ++i) {
 		*((s8*)dst + i) = *((s8*)src + i);
 	}

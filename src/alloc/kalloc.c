@@ -17,7 +17,9 @@ void kalloc_free(void* ptr) {
 }
 
 void* kalloc_realloc(void* ptr, u32 old_size, u32 new_size) {
-	if(new_size <= old_size) return ptr;
+	if (new_size <= old_size) {
+		return ptr;
+	}
 	void* mem = kalloc_heap_alloc(&heap, new_size);
 	util_memcpy(mem, ptr, old_size);
 	kalloc_free(ptr);

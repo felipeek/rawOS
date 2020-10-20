@@ -3,6 +3,7 @@
 #include "../screen.h"
 #include "../paging.h"
 
+#define COMPLEX_HEAP_ENABLED
 #define HEAP_HEADER_MAGIC 0xABCD
 #define HEAP_FOOTER_MAGIC 0xEF01
 #define NUM_PAGES_RESERVED_FOR_AVL 16
@@ -19,8 +20,6 @@ typedef struct {
 	u16 magic;
 	Kalloc_Heap_Header* header;
 } Kalloc_Heap_Footer;
-
-#define COMPLEX_HEAP_ENABLED
 
 #ifdef COMPLEX_HEAP_ENABLED
 void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) {
