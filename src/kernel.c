@@ -1,6 +1,6 @@
+#include "common.h"
 #include "screen.h"
 #include "interrupt.h"
-#include "common.h"
 #include "timer.h"
 #include "keyboard.h"
 #include "paging.h"
@@ -10,7 +10,6 @@
 #include "fs/initrd.h"
 #include "util/printf.h"
 #include "util/util.h"
-#include "util/printf.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -52,7 +51,6 @@ void read_folder(Vfs_Node* folder_node) {
 		printf("\n");
 	}
 }
-#include "util/bitmap.h"
 
 void main() {
 	timer_init();
