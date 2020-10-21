@@ -1,5 +1,5 @@
 #include "util.h"
-#include "../screen.h"
+#include "printf.h"
 
 void util_strcpy(s8* dst, const s8* src) {
 	s32 i = 0;
@@ -36,17 +36,15 @@ void util_memset(void* ptr, u8 value, u32 num) {
 	}
 }
 
-void util_assert(const s8* message, int condition) {
+void util_assert(const s8* message, s32 condition) {
 	if (!condition) {
-		screen_print("Assert failed: ");
-		screen_print(message);
-		screen_print("\n");
+		printf("Assert failed: %s\n", message);
 		util_panic("Assert failed");
 	}
 }
 
 void util_panic(const s8* message) {
-	screen_print("************ PANIC ************\n");
-	screen_print(message);
+	printf("************ PANIC ************\n");
+	printf(message);
 	while (1) {}
 }

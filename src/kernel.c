@@ -52,7 +52,7 @@ void read_folder(Vfs_Node* folder_node) {
 		printf("\n");
 	}
 }
-
+#include "util/bitmap.h"
 
 void main() {
 	timer_init();

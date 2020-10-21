@@ -35,28 +35,28 @@ s32 rand() {
 static void check_heap(const Kalloc_Heap* heap) {
 	// Check overall heap structure
 	Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)heap->initial_addr;
-	while ((unsigned char*)header < ((unsigned char*)heap->initial_addr + heap->size)) {
-		Kalloc_Heap_Footer* footer = (Kalloc_Heap_Footer*)((unsigned char*)header + sizeof(Kalloc_Heap_Header) + header->size);
+	while ((u8*)header < ((u8*)heap->initial_addr + heap->size)) {
+		Kalloc_Heap_Footer* footer = (Kalloc_Heap_Footer*)((u8*)header + sizeof(Kalloc_Heap_Header) + header->size);
 		util_assert("footer->header == header", footer->header == header);
 		util_assert("footer->magic == HEAP_FOOTER_MAGIC", footer->magic == HEAP_FOOTER_MAGIC);
 		util_assert("header->magic == HEAP_HEADER_MAGIC", header->magic == HEAP_HEADER_MAGIC);
 		util_assert("header->size < 1000000", header->size < 1000000);
 		util_assert("header->used == 0 || header->used == 1", header->used == 0 || header->used == 1);
-		header = (Kalloc_Heap_Header*)((unsigned char*)header + sizeof(Kalloc_Heap_Header) + header->size + sizeof(Kalloc_Heap_Footer));
+		header = (Kalloc_Heap_Header*)((u8*)header + sizeof(Kalloc_Heap_Header) + header->size + sizeof(Kalloc_Heap_Footer));
 	}
 
 	// Check that we are not receiving same addresses
-	for (int i = 0; i < alloc_datas_size; ++i) {
+	for (u32 i = 0; i < alloc_datas_size; ++i) {
 		Allocd_Data current = alloc_datas[i];
-		for (int j = i + 1; j < alloc_datas_size; ++j) {
+		for (u32 j = i + 1; j < alloc_datas_size; ++j) {
 			util_assert("current.ptr != alloc_datas[j].ptr", current.ptr != alloc_datas[j].ptr);
 		}
 	}
 
 	// Check that the heap headers are correct.
-	for (int i = 0; i < alloc_datas_size; ++i) {
+	for (u32 i = 0; i < alloc_datas_size; ++i) {
 		Allocd_Data current = alloc_datas[i];
-		Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)((unsigned char*)current.ptr - sizeof(Kalloc_Heap_Header));
+		Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)((u8*)current.ptr - sizeof(Kalloc_Heap_Header));
 		util_assert("heap header not correct", header->size >= current.size && header->size <= current.size + sizeof(Kalloc_Heap_Header) + sizeof(Kalloc_Heap_Footer));
 	}
 }
@@ -71,7 +71,7 @@ static void alloc_data(Kalloc_Heap* heap, u32 size) {
 }
 
 static void free_random_data(Kalloc_Heap* heap) {
-	int selected_index = rand() % alloc_datas_size;
+	u32 selected_index = rand() % alloc_datas_size;
 	kalloc_heap_free(heap, alloc_datas[selected_index].ptr);
 
 	for (u32 i = selected_index; i < alloc_datas_size - 1; ++i){ 
@@ -89,8 +89,8 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 	alloc_datas = (Allocd_Data*)alloc_data_addr;
 	alloc_datas_size = 0;
 
-	for (int i = 0; i < 2000; ++i) {
-		int r = rand() % 100;
+	for (u32 i = 0; i < 2000; ++i) {
+		u32 r = rand() % 100;
 		if (r < 75 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
 			alloc_data(empty_heap, size);
@@ -98,8 +98,8 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 			free_random_data(empty_heap);
 		}
 	}
-	for (int i = 0; i < 2000; ++i) {
-		int r = rand() % 100;
+	for (u32 i = 0; i < 2000; ++i) {
+		u32 r = rand() % 100;
 		if (r < 25 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
 			alloc_data(empty_heap, size);
@@ -107,8 +107,8 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 			free_random_data(empty_heap);
 		}
 	}
-	for (int i = 0; i < 2000; ++i) {
-		int r = rand() % 100;
+	for (u32 i = 0; i < 2000; ++i) {
+		u32 r = rand() % 100;
 		if (r < 75 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
 			alloc_data(empty_heap, size);
@@ -116,8 +116,8 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 			free_random_data(empty_heap);
 		}
 	}
-	for (int i = 0; i < 2000; ++i) {
-		int r = rand() % 100;
+	for (u32 i = 0; i < 2000; ++i) {
+		u32 r = rand() % 100;
 		if (r < 22 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
 			alloc_data(empty_heap, size);

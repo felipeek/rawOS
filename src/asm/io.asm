@@ -6,7 +6,7 @@ section .text
 
 ; the following registers must be preserved by the callee in cdecl (x86): EBX, ESI, EDI, EBP... EAX, EDX and ECX are call-clobbered registers
 
-; unsigned char io_byte_in(unsigned short port)
+; unsigned char io_byte_in(u16 port)
 io_byte_in:
     push ebp
     mov ebp, esp
@@ -17,7 +17,7 @@ io_byte_in:
     pop ebp
     ret
 
-; void io_byte_out(unsigned short port, unsigned char data)
+; void io_byte_out(u16 port, u8 data)
 io_byte_out:
     push ebp
     mov ebp, esp

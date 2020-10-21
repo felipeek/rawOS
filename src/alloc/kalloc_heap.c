@@ -1,6 +1,6 @@
 #include "kalloc_heap.h"
 #include "../util/util.h"
-#include "../screen.h"
+#include "../util/printf.h"
 #include "../paging.h"
 
 #define COMPLEX_HEAP_ENABLED
@@ -26,7 +26,7 @@ void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) 
 	util_assert("kalloc: initial address must be page-alinged", initial_addr % 0x1000 == 0);
 	util_assert("kalloc: insufficient number of initial pages", initial_pages * PAGE_SIZE >= sizeof(Kalloc_Heap_Footer) + sizeof(Kalloc_Heap_Header));
 
-	for (int i = 0; i < NUM_PAGES_RESERVED_FOR_AVL + initial_pages; ++i) {
+	for (u32 i = 0; i < NUM_PAGES_RESERVED_FOR_AVL + initial_pages; ++i) {
 		paging_create_page_with_any_frame(initial_addr / PAGE_SIZE + i);
 	}
 
@@ -37,7 +37,7 @@ void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) 
 	kalloc_avl_init(&heap->avl, (void*)heap->avl_initial_addr, NUM_PAGES_RESERVED_FOR_AVL * PAGE_SIZE);
 
 	Kalloc_Heap_Header* first_header = (Kalloc_Heap_Header*)heap->initial_addr;
-	Kalloc_Heap_Footer* first_footer = (Kalloc_Heap_Footer*)((unsigned char*)heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer));
+	Kalloc_Heap_Footer* first_footer = (Kalloc_Heap_Footer*)((u8*)heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer));
 
 	first_header->magic = HEAP_HEADER_MAGIC;
 	first_header->size = heap->size - sizeof(Kalloc_Heap_Header) - sizeof(Kalloc_Heap_Footer);
@@ -61,9 +61,9 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size) {
 		// If we still have enough free space in the hole, we generate a new hole.
 		if (target_hole->size > size + sizeof(Kalloc_Heap_Header) + sizeof(Kalloc_Heap_Footer)) {
 			Kalloc_Heap_Header* new_block_header = target_hole;
-			Kalloc_Heap_Footer* new_block_footer = (Kalloc_Heap_Footer*)((unsigned char*)new_block_header + sizeof(Kalloc_Heap_Header) + size);
-			Kalloc_Heap_Header* new_hole_header = (Kalloc_Heap_Header*)((unsigned char*)new_block_footer + sizeof(Kalloc_Heap_Footer));
-			Kalloc_Heap_Footer* new_hole_footer = (Kalloc_Heap_Footer*)((unsigned char*)target_hole + sizeof(Kalloc_Heap_Header) + target_hole->size);
+			Kalloc_Heap_Footer* new_block_footer = (Kalloc_Heap_Footer*)((u8*)new_block_header + sizeof(Kalloc_Heap_Header) + size);
+			Kalloc_Heap_Header* new_hole_header = (Kalloc_Heap_Header*)((u8*)new_block_footer + sizeof(Kalloc_Heap_Footer));
+			Kalloc_Heap_Footer* new_hole_footer = (Kalloc_Heap_Footer*)((u8*)target_hole + sizeof(Kalloc_Heap_Header) + target_hole->size);
 
 			new_block_header->size = size;
 			new_block_header->used = 1;
@@ -74,27 +74,23 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size) {
 			new_hole_header->used = 0;
 			new_hole_footer->header = new_hole_header;
 			kalloc_avl_insert(&heap->avl, new_hole_header->size, new_hole_header);
-			return (unsigned char*)new_block_header + sizeof(Kalloc_Heap_Header);
+			return (u8*)new_block_header + sizeof(Kalloc_Heap_Header);
 		} else {
 			target_hole->used = 1;
-			return (unsigned char*)target_hole + sizeof(Kalloc_Heap_Header);
+			return (u8*)target_hole + sizeof(Kalloc_Heap_Header);
 		}
 	} else {
 		// If we were not able to find a fitting hole in the AVL, we need to expand the heap.
-		screen_print("Expanding heap... Going from ");
-		screen_print_u32(heap->size / PAGE_SIZE);
-		screen_print(" pages to ");
-		screen_print_u32(heap->size / PAGE_SIZE + 1);
-		screen_print(" pages.\n");
+		printf("Expanding heap... Going from %u pages to %u pages.\n", heap->size / PAGE_SIZE, heap->size / PAGE_SIZE + 1);
 		paging_create_page_with_any_frame((heap->initial_addr + heap->size) / PAGE_SIZE);
 
-		Kalloc_Heap_Footer* last_footer = (Kalloc_Heap_Footer*)((unsigned char*)heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer));
+		Kalloc_Heap_Footer* last_footer = (Kalloc_Heap_Footer*)((u8*)heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer));
 		Kalloc_Heap_Header* last_header = last_footer->header;
 		heap->size += PAGE_SIZE;
 
 		if (last_header->used) {
-			Kalloc_Heap_Header* new_hole_header = (Kalloc_Heap_Header*)((unsigned char*)last_footer + sizeof(Kalloc_Heap_Footer));
-			Kalloc_Heap_Footer* new_hole_footer = (Kalloc_Heap_Footer*)((unsigned char*)new_hole_header + PAGE_SIZE - sizeof(Kalloc_Heap_Footer));
+			Kalloc_Heap_Header* new_hole_header = (Kalloc_Heap_Header*)((u8*)last_footer + sizeof(Kalloc_Heap_Footer));
+			Kalloc_Heap_Footer* new_hole_footer = (Kalloc_Heap_Footer*)((u8*)new_hole_header + PAGE_SIZE - sizeof(Kalloc_Heap_Footer));
 			new_hole_header->magic = HEAP_HEADER_MAGIC;
 			new_hole_header->size = PAGE_SIZE - sizeof(Kalloc_Heap_Header) - sizeof(Kalloc_Heap_Footer);
 			new_hole_header->used = 0;
@@ -103,7 +99,7 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size) {
 
 			kalloc_avl_insert(&heap->avl, new_hole_header->size, new_hole_header);
 		} else {
-			Kalloc_Heap_Footer* new_footer = (Kalloc_Heap_Footer*)((unsigned char*)heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer));
+			Kalloc_Heap_Footer* new_footer = (Kalloc_Heap_Footer*)((u8*)heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer));
 			new_footer->magic = HEAP_FOOTER_MAGIC;
 			new_footer->header = last_header;
 
@@ -116,13 +112,13 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size) {
 }
 
 void kalloc_heap_free(Kalloc_Heap* heap, void* ptr) {
-	Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)((unsigned char*)ptr - sizeof(Kalloc_Heap_Header));
-	Kalloc_Heap_Footer* footer = (Kalloc_Heap_Footer*)((unsigned char*)ptr + header->size);
+	Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)((u8*)ptr - sizeof(Kalloc_Heap_Header));
+	Kalloc_Heap_Footer* footer = (Kalloc_Heap_Footer*)((u8*)ptr + header->size);
 	util_assert("found block in inconsistent state (used == 0)", header->used == 1);
 
 	// Check if there is a previous header
 	if ((u32)header != heap->initial_addr) {
-		Kalloc_Heap_Footer* previous_footer = (Kalloc_Heap_Footer*)((unsigned char*)header - sizeof(Kalloc_Heap_Footer));
+		Kalloc_Heap_Footer* previous_footer = (Kalloc_Heap_Footer*)((u8*)header - sizeof(Kalloc_Heap_Footer));
 		Kalloc_Heap_Header* previous_header = previous_footer->header;
 
 		// Check whether previous header defines a hole
@@ -137,8 +133,8 @@ void kalloc_heap_free(Kalloc_Heap* heap, void* ptr) {
 
 	// Check if there is a next header
 	if ((u32)footer != heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer)) {
-		Kalloc_Heap_Header* next_header = (Kalloc_Heap_Header*)((unsigned char*)footer + sizeof(Kalloc_Heap_Footer));
-		Kalloc_Heap_Footer* next_footer = (Kalloc_Heap_Footer*)((unsigned char*)next_header + sizeof(Kalloc_Heap_Header) + next_header->size);
+		Kalloc_Heap_Header* next_header = (Kalloc_Heap_Header*)((u8*)footer + sizeof(Kalloc_Heap_Footer));
+		Kalloc_Heap_Footer* next_footer = (Kalloc_Heap_Footer*)((u8*)next_header + sizeof(Kalloc_Heap_Header) + next_header->size);
 
 		// Check whether next header defines a hole
 		if (!next_header->used) {
@@ -156,32 +152,28 @@ void kalloc_heap_free(Kalloc_Heap* heap, void* ptr) {
 }
 
 void kalloc_heap_print(const Kalloc_Heap* heap) {
-	screen_print("*** PRINTING HEAP STATE ***\n");
-	int counter = 0;
+	printf("*** PRINTING HEAP STATE ***\n");
+	u32 counter = 0;
 	Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)heap->initial_addr;
-	while ((unsigned char*)header < ((unsigned char*)heap->initial_addr + heap->size)) {
-		screen_print("Element: ");
-		screen_print_u32(++counter);
-		screen_print("\n");
+	while ((u8*)header < ((u8*)heap->initial_addr + heap->size)) {
+		printf("Element: %u\n", ++counter);
 
-		screen_print("   Type: ");
+		printf("   Type: ");
 		if (header->used) {
-			screen_print("Block\n");
+			printf("Block\n");
 		} else {
-			screen_print("Hole\n");
+			printf("Hole\n");
 		}
-		screen_print("   Size: ");
-		screen_print_u32(header->size);
-		screen_print("\n");
-		header = (Kalloc_Heap_Header*)((unsigned char*)header + sizeof(Kalloc_Heap_Header) + header->size + sizeof(Kalloc_Heap_Footer));
+		printf("   Size: %u\n", header->size);
+		header = (Kalloc_Heap_Header*)((u8*)header + sizeof(Kalloc_Heap_Header) + header->size + sizeof(Kalloc_Heap_Footer));
 	}
-	screen_print("******\n");
+	printf("******\n");
 }
 #else
 #define KERNEL_PAGES 100
 u32 k_addr;
 void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) {
-	for (int i = 0; i < KERNEL_PAGES; ++i) {
+	for (u32 i = 0; i < KERNEL_PAGES; ++i) {
 		paging_create_page_with_any_frame(initial_addr / PAGE_SIZE + i);
 	}
 	k_addr = initial_addr;

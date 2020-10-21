@@ -1,16 +1,55 @@
 #include "bitmap.h"
 #include "util.h"
-#include "../screen.h"
+#include "printf.h"
 
 void bitmap_print(const Bitmap* bitmap) {
-	screen_print("Bitmap: ");
+	printf("Bitmap: ");
 	for (u32 i = 0; i < bitmap->size; ++i) {
-		screen_print_byte(bitmap->data[i]);
+		if (bitmap->data[i] & 0b00000001) {
+			printf("1");
+		} else {
+			printf("0");
+		}
+		if (bitmap->data[i] & 0b00000010) {
+			printf("1");
+		} else {
+			printf("0");
+		}
+		if (bitmap->data[i] & 0b00000100) {
+			printf("1");
+		} else {
+			printf("0");
+		}
+		if (bitmap->data[i] & 0b00001000) {
+			printf("1");
+		} else {
+			printf("0");
+		}
+		if (bitmap->data[i] & 0b00010000) {
+			printf("1");
+		} else {
+			printf("0");
+		}
+		if (bitmap->data[i] & 0b00100000) {
+			printf("1");
+		} else {
+			printf("0");
+		}
+		if (bitmap->data[i] & 0b01000000) {
+			printf("1");
+		} else {
+			printf("0");
+		}
+		if (bitmap->data[i] & 0b10000000) {
+			printf("1");
+		} else {
+			printf("0");
+		}
 	}
-	screen_print("\n");
+	printf("\n");
 }
 
-void bitmap_init(Bitmap* bitmap, unsigned char* data, u32 size) {
+void bitmap_init(Bitmap* bitmap, u8* data, u32 size) {
 	bitmap->data = data;
 	bitmap->size = size;
 }

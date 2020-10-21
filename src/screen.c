@@ -15,6 +15,13 @@ typedef struct {
 
 static Screen screen;
 
+void screen_print_char(s8 c) {
+	s8 buf[2];
+	buf[0] = c;
+	buf[1] = 0;
+	screen_print(buf);
+}
+
 static void screen_print_nibble(u8 nibble) {
 	u8 data[2];
 	data[0] = nibble + '0';
@@ -52,7 +59,7 @@ static void update_text_cursor() {
 
 // Prints a single character at the screen, in position <x, y>
 static void print_at(s8 c, s32 y, s32 x) {
-	char* video_memory = (char*)VIDEO_MEMORY_ADDRESS;
+	s8* video_memory = (s8*)VIDEO_MEMORY_ADDRESS;
 	video_memory[(y * VIDEO_COLS_NUM + x) * 2] = c;
 	video_memory[(y * VIDEO_COLS_NUM + x) * 2 + 1] = WHITE_ON_BLACK_ATTRIBUTE;
 }

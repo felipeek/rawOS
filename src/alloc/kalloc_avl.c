@@ -2,14 +2,14 @@
 #include "../util/util.h"
 
 // Compare the size of two holes.
-static int compare_hole_size(u32 s1, u32 s2) {
+static s32 compare_hole_size(u32 s1, u32 s2) {
 	if (s1 > s2) return 1;
 	if (s1 < s2) return -1;
 	return 0;
 }
 
 // Compare two holes, taking into consideration their addresses too.
-static int compare_hole(u32 h1_size, void* h1_addr, u32 h2_size, void* h2_addr) {
+static s32 compare_hole(u32 h1_size, void* h1_addr, u32 h2_size, void* h2_addr) {
 	if (h1_size > h2_size) return 1;
 	if (h1_size < h2_size) return -1;
 	if (h1_addr > h2_addr) return 1;

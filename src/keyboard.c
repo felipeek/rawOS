@@ -1,8 +1,8 @@
 #include "keyboard.h"
 #include "interrupt.h"
-#include "screen.h"
 #include "asm/io.h"
 #include "keyboard_scancode_set_1.h"
+#include "util/printf.h"
 
 #define KEYBOARD_DATA_PORT 0x60                 // Read/Write port
 #define KEYBOARD_STATUS_REGISTER_PORT 0x64      // Read port
@@ -18,7 +18,7 @@ void keyboard_interrupt_handler(const Interrupt_Handler_Args* args) {
 	// However, just for learning purposes, I'm confirming it is 1.
 	u8 status = io_byte_in(KEYBOARD_STATUS_REGISTER_PORT);
 	if (!(status & 0x01)) {
-		screen_print("Error: Output buffer status is 0 after receiving the interrupt!");
+		printf("Error: Output buffer status is 0 after receiving the interrupt!\n");
 	}
 
 	// Get the scancode from the Keyboard device.
@@ -27,33 +27,33 @@ void keyboard_interrupt_handler(const Interrupt_Handler_Args* args) {
 	status = io_byte_in(KEYBOARD_STATUS_REGISTER_PORT);
 
 	switch (scan_code) {
-		case KEYBOARD_A_PRESS: screen_print("A"); break;
-		case KEYBOARD_B_PRESS: screen_print("B"); break;
-		case KEYBOARD_C_PRESS: screen_print("C"); break;
-		case KEYBOARD_D_PRESS: screen_print("D"); break;
-		case KEYBOARD_E_PRESS: screen_print("E"); break;
-		case KEYBOARD_F_PRESS: screen_print("F"); break;
-		case KEYBOARD_G_PRESS: screen_print("G"); break;
-		case KEYBOARD_H_PRESS: screen_print("H"); break;
-		case KEYBOARD_I_PRESS: screen_print("I"); break;
-		case KEYBOARD_J_PRESS: screen_print("J"); break;
-		case KEYBOARD_K_PRESS: screen_print("K"); break;
-		case KEYBOARD_L_PRESS: screen_print("L"); break;
-		case KEYBOARD_M_PRESS: screen_print("M"); break;
-		case KEYBOARD_N_PRESS: screen_print("N"); break;
-		case KEYBOARD_O_PRESS: screen_print("O"); break;
-		case KEYBOARD_P_PRESS: screen_print("P"); break;
-		case KEYBOARD_Q_PRESS: screen_print("Q"); break;
-		case KEYBOARD_R_PRESS: screen_print("R"); break;
-		case KEYBOARD_S_PRESS: screen_print("S"); break;
-		case KEYBOARD_T_PRESS: screen_print("T"); break;
-		case KEYBOARD_U_PRESS: screen_print("U"); break;
-		case KEYBOARD_V_PRESS: screen_print("V"); break;
-		case KEYBOARD_X_PRESS: screen_print("X"); break;
-		case KEYBOARD_W_PRESS: screen_print("W"); break;
-		case KEYBOARD_Y_PRESS: screen_print("Y"); break;
-		case KEYBOARD_Z_PRESS: screen_print("Z"); break;
-		case KEYBOARD_ENTER_PRESS: screen_print("\n"); break;
+		case KEYBOARD_A_PRESS: printf("A"); break;
+		case KEYBOARD_B_PRESS: printf("B"); break;
+		case KEYBOARD_C_PRESS: printf("C"); break;
+		case KEYBOARD_D_PRESS: printf("D"); break;
+		case KEYBOARD_E_PRESS: printf("E"); break;
+		case KEYBOARD_F_PRESS: printf("F"); break;
+		case KEYBOARD_G_PRESS: printf("G"); break;
+		case KEYBOARD_H_PRESS: printf("H"); break;
+		case KEYBOARD_I_PRESS: printf("I"); break;
+		case KEYBOARD_J_PRESS: printf("J"); break;
+		case KEYBOARD_K_PRESS: printf("K"); break;
+		case KEYBOARD_L_PRESS: printf("L"); break;
+		case KEYBOARD_M_PRESS: printf("M"); break;
+		case KEYBOARD_N_PRESS: printf("N"); break;
+		case KEYBOARD_O_PRESS: printf("O"); break;
+		case KEYBOARD_P_PRESS: printf("P"); break;
+		case KEYBOARD_Q_PRESS: printf("Q"); break;
+		case KEYBOARD_R_PRESS: printf("R"); break;
+		case KEYBOARD_S_PRESS: printf("S"); break;
+		case KEYBOARD_T_PRESS: printf("T"); break;
+		case KEYBOARD_U_PRESS: printf("U"); break;
+		case KEYBOARD_V_PRESS: printf("V"); break;
+		case KEYBOARD_X_PRESS: printf("X"); break;
+		case KEYBOARD_W_PRESS: printf("W"); break;
+		case KEYBOARD_Y_PRESS: printf("Y"); break;
+		case KEYBOARD_Z_PRESS: printf("Z"); break;
+		case KEYBOARD_ENTER_PRESS: printf("\n"); break;
 	}
 }
 

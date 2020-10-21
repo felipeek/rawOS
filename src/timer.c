@@ -1,6 +1,6 @@
 #include "timer.h"
 #include "asm/io.h"
-#include "screen.h"
+#include "util/printf.h"
 #include "interrupt.h"
 
 #define PIT_CLOCK_FREQUENCY_HZ 1193180
@@ -14,7 +14,7 @@ static void timer_interrupt_handler(const Interrupt_Handler_Args* args) {
 	static u32 tick = 0;
 	tick++;
 	if (tick % 100 == 0) {
-		screen_print("A second has passed.\n");
+		printf("A second has passed.\n");
 	}
 }
 

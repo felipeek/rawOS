@@ -3,7 +3,7 @@
 #include "util/util.h"
 #include "interrupt.h"
 #include "util/bitmap.h"
-#include "screen.h"
+#include "util/printf.h"
 
 #define KERNEL_STACK_RESERVED_PAGES 128
 // We can only use 3GB of PHYSICAL_RAM_SIZE because of the 3GB barrier imposed by the hardware
@@ -69,7 +69,7 @@ typedef struct {
 	u32 tables_x86_representation[1024];
 } Page_Directory;
 
-unsigned char available_frames_bitmap_data[AVAILABLE_FRAMES_NUM / 8];
+u8 available_frames_bitmap_data[AVAILABLE_FRAMES_NUM / 8];
 typedef struct {
 	Bitmap available_frames;
 	Page_Directory* page_directory;
@@ -107,9 +107,7 @@ static void create_pre_paging_page_table(u32 page_table_index) {
 	// Note that we can have a recursive call with depth even more bigger.
 	create_pre_paging_mapping(page_num, page_num);
 
-	screen_print("Allocating new table ");
-	screen_print_u32(page_table_index);
-	screen_print("\n");
+	printf("Allocating new table %u\n", page_table_index);
 }
 
 // THIS FUNCTION SHOULD ONLY BE USED BEFORE PAGING IS ENABLED.
@@ -165,7 +163,7 @@ static void* reserve_pre_paging_aligned_space(u32 size) {
 
 /* ******************** */
 
-static int page_exist(u32 page_num) {
+static s32 page_exist(u32 page_num) {
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 	if (paging.page_directory->tables[page_table_index]) {
@@ -178,9 +176,7 @@ static int page_exist(u32 page_num) {
 // Can only be called if the given virtual page is not being used.
 // Returns allocd frame
 u32 paging_create_page_with_any_frame(u32 page_num) {
-	screen_print("allocating page num ");
-	screen_print_u32(page_num);
-	screen_print("\n");
+	printf("allocating page num %u\n", page_num);
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
@@ -197,9 +193,7 @@ u32 paging_create_page_with_any_frame(u32 page_num) {
 		paging.page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
 		util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
 
-		screen_print("Allocating new table ");
-		screen_print_u32(page_table_index);
-		screen_print("\n");
+		printf("Allocating new table %u\n", page_table_index);
 	}
 
 	Page_Entry* page_entry = &paging.page_directory->tables[page_table_index]->pages[page_num_within_table];
@@ -218,9 +212,7 @@ u32 paging_create_page_with_any_frame(u32 page_num) {
 	// ... and it will be extremely hard to debug what is going on :)
 	u8* test = (u8*)(page_num * 0x1000);
 	*test = 0xAB;
-	//screen_print("Page: 0x");
-	//screen_print_u32(allocd_frame * 0x1000);
-	//screen_print("\n");
+	//printf("Page: %x\n", allocd_frame * 0x1000);
 	util_assert("A non-addressable frame was chosen!", *test == 0xAB);
 
 	return allocd_frame;
@@ -241,39 +233,36 @@ static void page_fault_handler(const Interrupt_Handler_Args* args) {
 	u32 faulting_addr = paging_get_faulting_address();
 
 	// The error code gives us details of what happened.
-	int present = !(args->err_code & 0x1);   // Page not present
-	int rw = args->err_code & 0x2;           // Write operation?
-	int us = args->err_code & 0x4;           // Processor was in user-mode?
-	int reserved = args->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
-	int id = args->err_code & 0x10;          // Caused by an instruction fetch?
+	s32 present = !(args->err_code & 0x1);   // Page not present
+	s32 rw = args->err_code & 0x2;           // Write operation?
+	s32 us = args->err_code & 0x4;           // Processor was in user-mode?
+	s32 reserved = args->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+	s32 id = args->err_code & 0x10;          // Caused by an instruction fetch?
 
 	// Output an error message.
-	screen_print("Page fault! ( ");
-	if (present) screen_print("present ");
-	if (rw) screen_print("read-only ");
-	if (us) screen_print("user-mode ");
-	if (reserved) screen_print("reserved ");
-	screen_print(") at 0x");
-	screen_print_u32(faulting_addr);
-	screen_print("\n");
+	printf("Page fault! ( ");
+	if (present) printf("present ");
+	if (rw) printf("read-only ");
+	if (us) printf("user-mode ");
+	if (reserved) printf("reserved ");
+	printf(") at 0x%x\n", faulting_addr);
 	util_panic("Page fault");
 }
 
 static void print_all_present_pages() {
-	screen_print("Present pages:\n");
+	printf("Present pages:\n");
 	for (u32 i = 0; i < 1024; ++i) {
 		Page_Table* current_page_table = paging.page_directory->tables[i];
 		if (current_page_table) {
 			for (u32 j = 0; j < 1024; ++j) {
 				Page_Entry* page_entry = &current_page_table->pages[j];
 				if (page_entry->present) {
-					screen_print_ptr((void*)(0x400000 * i + 0x1000 * j));
-					screen_print(" ");
+					printf("%x ", (void*)(0x400000 * i + 0x1000 * j));
 				}
 			}
 		}
 	}
-	screen_print("\n");
+	printf("\n");
 }
 
 void paging_init() {
@@ -296,11 +285,7 @@ void paging_init() {
 	util_assert("The virtual address of kernel page tables must be multiple of 0x1000", KERNEL_PAGE_TABLES_ADDRESS % 0x1000 == 0);
 	u32 first_page_table_index = (KERNEL_PAGE_TABLES_ADDRESS / 0x1000) / 1024;
 	u32 last_page_table_index = ((KERNEL_PAGE_TABLES_ADDRESS + 0x400000) / 0x1000) / 1024;
-	screen_print("Pre-creating page tables from ");
-	screen_print_u32(first_page_table_index);
-	screen_print(" to ");
-	screen_print_u32(last_page_table_index);
-	screen_print(".\n");
+	printf("Pre-creating page tables from %u to %u.\n", first_page_table_index, last_page_table_index);
 	for (u32 i = first_page_table_index; i <= last_page_table_index; ++i) {
 		create_pre_paging_page_table(i);
 	}
@@ -351,5 +336,5 @@ void paging_init() {
 	//print_all_present_pages();
 
 	//create_page_with_any_frame(0x4ABDF);
-	//u8 a = *(u8*)0x4ABDFFFF;
+	//u8 a = *(u8*)0x4ABDFFFF;	
 }
