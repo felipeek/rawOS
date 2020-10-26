@@ -16,7 +16,7 @@ typedef struct {
 } Kalloc_AVL;
 
 void kalloc_avl_init(Kalloc_AVL* avl, void* data, u32 data_size);
-void* kalloc_avl_find_hole(Kalloc_AVL* avl, u32 hole_size);
+void* kalloc_avl_find_hole(const Kalloc_AVL* avl, u32 hole_size, u32 alignment);
 s32 kalloc_avl_insert(Kalloc_AVL* avl, u32 hole_size, void* hole_addr);
 s32 kalloc_avl_remove(Kalloc_AVL* avl, u32 hole_size, void* hole_addr);
 

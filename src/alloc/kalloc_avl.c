@@ -57,19 +57,31 @@ static void put_free_node(Kalloc_AVL* avl, Kalloc_AVL_Node* node) {
 	}
 }
 
-static void* avl_find_hole_internal(Kalloc_AVL_Node* node, u32 hole_size) {
+static int hole_has_alignment_space(const Kalloc_AVL_Node* node, u32 wanted_size, u32 alignment) {
+	u32 aligned_addr = (u32)node->hole_addr;
+	if (alignment != 0) {
+		if (aligned_addr & (alignment - 1)) {
+			aligned_addr &= ~(alignment - 1);
+			aligned_addr += alignment;
+		}
+	}
+
+	return node->hole_size >= wanted_size + (aligned_addr - (u32)node->hole_addr);
+}
+
+static void* avl_find_hole_internal(Kalloc_AVL_Node* node, u32 hole_size, u32 alignment) {
 	if (!node) {
 		return 0;
 	}
 
 	s32 comparison = compare_hole_size(hole_size, node->hole_size);
-	if (comparison > 0) {
-		return avl_find_hole_internal(node->right, hole_size);
+	if (comparison > 0 || !hole_has_alignment_space(node, hole_size, alignment)) {
+		return avl_find_hole_internal(node->right, hole_size, alignment);
 	} else {
 		// When comparison == 0, we let the code fall here aswell.
 		// This will ensure that we will always choose the smallest hole address
 		// Which is useful to prevent fragmentation and allow heap shrinking
-		void* hole_addr = avl_find_hole_internal(node->left, hole_size);
+		void* hole_addr = avl_find_hole_internal(node->left, hole_size, alignment);
 		return hole_addr ? hole_addr : node->hole_addr;
 	}
 }
@@ -79,8 +91,8 @@ static void* avl_find_hole_internal(Kalloc_AVL_Node* node, u32 hole_size) {
 // If there are more than 1 candidate holes, we pick the one with smallest addr.
 // @TODO(fek): when we introduce heap shrinking, we might want to give preference to picking the smallest addr, instead of smallest size.
 // This would improve the shrinking, but it could increase the fragmentation
-void* kalloc_avl_find_hole(Kalloc_AVL* avl, u32 hole_size) {
-	return avl_find_hole_internal(avl->root, hole_size);
+void* kalloc_avl_find_hole(const Kalloc_AVL* avl, u32 hole_size, u32 alignment) {
+	return avl_find_hole_internal(avl->root, hole_size, alignment);
 }
 
 static void update_node_height(Kalloc_AVL_Node* node) {

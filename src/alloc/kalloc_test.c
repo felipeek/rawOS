@@ -40,7 +40,6 @@ static void check_heap(const Kalloc_Heap* heap) {
 		util_assert("footer->header == header", footer->header == header);
 		util_assert("footer->magic == HEAP_FOOTER_MAGIC", footer->magic == HEAP_FOOTER_MAGIC);
 		util_assert("header->magic == HEAP_HEADER_MAGIC", header->magic == HEAP_HEADER_MAGIC);
-		util_assert("header->size < 1000000", header->size < 1000000);
 		util_assert("header->used == 0 || header->used == 1", header->used == 0 || header->used == 1);
 		header = (Kalloc_Heap_Header*)((u8*)header + sizeof(Kalloc_Heap_Header) + header->size + sizeof(Kalloc_Heap_Footer));
 	}
@@ -57,13 +56,16 @@ static void check_heap(const Kalloc_Heap* heap) {
 	for (u32 i = 0; i < alloc_datas_size; ++i) {
 		Allocd_Data current = alloc_datas[i];
 		Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)((u8*)current.ptr - sizeof(Kalloc_Heap_Header));
-		util_assert("heap header not correct", header->size >= current.size && header->size <= current.size + sizeof(Kalloc_Heap_Header) + sizeof(Kalloc_Heap_Footer));
+		util_assert("header->magic == HEAP_HEADER_MAGIC", header->magic == HEAP_HEADER_MAGIC);
 	}
 }
 
-static void alloc_data(Kalloc_Heap* heap, u32 size) {
+static void alloc_data(Kalloc_Heap* heap, u32 size, u32 alignment) {
 	Allocd_Data ad;
-	ad.ptr = kalloc_heap_alloc(heap, size);
+	ad.ptr = kalloc_heap_alloc(heap, size, alignment);
+	if (alignment != 0) {
+		util_assert("tried to allocate aligned data, but received data was not aligned", (int)ad.ptr % alignment == 0);
+	}
 	ad.size = size;
 	alloc_datas[alloc_datas_size++] = ad;
 	check_heap(heap);
@@ -72,13 +74,17 @@ static void alloc_data(Kalloc_Heap* heap, u32 size) {
 
 static void free_random_data(Kalloc_Heap* heap) {
 	u32 selected_index = rand() % alloc_datas_size;
-	kalloc_heap_free(heap, alloc_datas[selected_index].ptr);
+	
+	// We never free the first entry, because when the heap is empty, we cannot allocate aligned data.
+	if (selected_index > 0) {
+		kalloc_heap_free(heap, alloc_datas[selected_index].ptr);
 
-	for (u32 i = selected_index; i < alloc_datas_size - 1; ++i){ 
-		alloc_datas[i] = alloc_datas[i + 1];
+		for (u32 i = selected_index; i < alloc_datas_size - 1; ++i){ 
+			alloc_datas[i] = alloc_datas[i + 1];
+		}
+
+		--alloc_datas_size;
 	}
-
-	--alloc_datas_size;
 }
 
 void kalloc_test(Kalloc_Heap* empty_heap) {
@@ -89,11 +95,16 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 	alloc_datas = (Allocd_Data*)alloc_data_addr;
 	alloc_datas_size = 0;
 
+	// Allocate dummy data so we can start allocating aligned data.
+	alloc_data(empty_heap, 1, 0);
+
+	u32 alignment = 0x1000;
+
 	for (u32 i = 0; i < 2000; ++i) {
 		u32 r = rand() % 100;
 		if (r < 75 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
-			alloc_data(empty_heap, size);
+			alloc_data(empty_heap, size, alignment);
 		} else {
 			free_random_data(empty_heap);
 		}
@@ -102,7 +113,7 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 		u32 r = rand() % 100;
 		if (r < 25 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
-			alloc_data(empty_heap, size);
+			alloc_data(empty_heap, size, alignment);
 		} else {
 			free_random_data(empty_heap);
 		}
@@ -111,7 +122,7 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 		u32 r = rand() % 100;
 		if (r < 75 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
-			alloc_data(empty_heap, size);
+			alloc_data(empty_heap, size, alignment);
 		} else {
 			free_random_data(empty_heap);
 		}
@@ -120,7 +131,7 @@ void kalloc_test(Kalloc_Heap* empty_heap) {
 		u32 r = rand() % 100;
 		if (r < 22 || alloc_datas_size == 0) {
 			u32 size = (u32)rand() % 1024;
-			alloc_data(empty_heap, size);
+			alloc_data(empty_heap, size, alignment);
 		} else {
 			free_random_data(empty_heap);
 		}
