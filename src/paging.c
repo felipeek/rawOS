@@ -54,7 +54,7 @@ typedef struct {
 	u32 dirty : 1;              // Gets set if the page has been written to (by the CPU)
 	u32 reserved2 : 2;          // Reserved for the CPU. Cannot be changed.
 	u32 available : 3;          // Unused and available for kernel use.
-	u32 frame_address : 20;     // The high 20 bits of the frame address in RAM.
+	u32 frame_address_20_bits : 20;     // The high 20 bits of the frame address in RAM.
 } Page_Entry;
 
 // The page table. Each page table contains 1024 pages.
@@ -141,7 +141,7 @@ static void create_pre_paging_mapping(u32 page_num, u32 frame_num) {
 	page_entry->present = 1;
 	page_entry->user_mode = 0;  // for now all frames are kernel frames
 	page_entry->writable = 1;   // for now all pages are writable
-	page_entry->frame_address = frame_num;
+	page_entry->frame_address_20_bits = frame_num;
 }
 
 // Reserve space after the end of the kernel code+data memory segment.
@@ -174,7 +174,7 @@ static u32 get_physical_address_of_virtual_address(const Page_Directory* page_di
 	u32 page_offset = virtual_addr % 4096;
 	u32 table_num = page_num / 1024;
 	u32 page_index_within_table = page_num % 1024;
-	return page_directory->tables[table_num]->pages[page_index_within_table].frame_address * 0x1000 + page_offset;
+	return page_directory->tables[table_num]->pages[page_index_within_table].frame_address_20_bits * 0x1000 + page_offset;
 }
 // Clone the page_directory of an existing process.
 // The kernel is always linked to the first 1GB of the address space.
@@ -196,6 +196,7 @@ static u32 clone_page_directory_for_new_process(const Page_Directory* page_direc
 	for (u32 i = 0; i < 1024 / 4; ++i) {
 		// If the page table exists
 		if (page_directory->tables[i]) {
+			// Link (don't copy) the table
 			cloned_page_directory->tables[i] = page_directory->tables[i];
 			cloned_page_directory->tables_x86_representation[i] = page_directory->tables_x86_representation[i];
 		}
@@ -218,24 +219,29 @@ static u32 clone_page_directory_for_new_process(const Page_Directory* page_direc
 
 			for (u32 j = 0; j < 1024; ++j) {
 				Page_Entry* current_page_entry = &page_directory->tables[i]->pages[j];
-				if (current_page_entry) {
+				if (current_page_entry->present) {
+					// For now, the new page entry receives the same attributes as the one being cloned
 					copied_page_table->pages[j] = *current_page_entry;
+					// Allocate a new frame for the new page
 					u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
 					bitmap_set(&paging.available_frames, allocd_frame);
-					paging_copy_frame(allocd_frame, current_page_entry->frame_address);
-					copied_page_table->pages[j].frame_address = allocd_frame;
+					// Calculate the frame's physical address of the page that we are cloning
+					u32 current_page_frame_address = get_physical_address_of_virtual_address(page_directory,
+						current_page_entry->frame_address_20_bits * 0x1000);
+					// Copy the frame that we are cloning to the frame that we just allocated
+					paging_copy_frame(allocd_frame * 0x1000, current_page_frame_address);
+					// Update the page entry to point to the new frame address
+					copied_page_table->pages[j].frame_address_20_bits = allocd_frame;
 				}
 			}
 
+			// Assign tables 'i' of the new page directory to the table we just created
 			cloned_page_directory->tables[i] = copied_page_table;
+			// Get the physical address of the table that we just created
 			u32 copied_page_table_physical_address = get_physical_address_of_virtual_address(paging.kernel_page_directory,
 				(u32)copied_page_table);
+			// Set the tables_x86_representation, expected by x86, to the physical address just calculated
 			cloned_page_directory->tables_x86_representation[i] = copied_page_table_physical_address | 0x7; // PRESENT, RW, US
-			printf("Old_Table_Number: %u\nOld_Table_virtual_addr:%x\nOld_Table_phys_addr:%x\n", i, page_directory->tables[i],
-				page_directory->tables_x86_representation[i] & 0xFFFFFFF8);
-			printf("New_Table_Number: %u\nNew_Table_virtual_addr:%x\nNew_Table_phys_addr:%x\n", i, cloned_page_directory->tables[i],
-				cloned_page_directory->tables_x86_representation[i] & 0xFFFFFFF8);
-			//printf("Virtual Address:%x\nPhysical Address:%x\n", (u32)copied_page_table, copied_page_table_physical_address);
 		}
 	}
 
@@ -283,7 +289,7 @@ static u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32
 	page_entry->present = 1;
 	page_entry->user_mode = 0;  // for now all frames are kernel frames
 	page_entry->writable = 1;   // for now all pages are writable
-	page_entry->frame_address = allocd_frame;
+	page_entry->frame_address_20_bits = allocd_frame;
 
 	// Double-check whether this frame is addressable!
 	// If we pick a physical page that is not addressable (because, for example, it is reserved for MMIO),
@@ -425,6 +431,6 @@ void paging_init() {
 // @TEMPORARY: for tests
 void test_clone() {
 	u32 cloned_page_directory_physical_addr = clone_page_directory_for_new_process(paging.kernel_page_directory);
-	paging_switch_page_directory((u32*)cloned_page_directory_physical_addr);
 	while(1);
+	paging_switch_page_directory((u32*)cloned_page_directory_physical_addr);
 }
