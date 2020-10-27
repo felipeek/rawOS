@@ -4,6 +4,7 @@
 #include "interrupt.h"
 #include "util/bitmap.h"
 #include "util/printf.h"
+#include "alloc/kalloc.h"
 
 #define KERNEL_STACK_RESERVED_PAGES 128
 // We can only use 3GB of PHYSICAL_RAM_SIZE because of the 3GB barrier imposed by the hardware
@@ -64,15 +65,19 @@ typedef struct {
 // The page directory. Each page directory contains 1024 page tables.
 typedef struct {
 	// Pointers to each page table
+	// These pointers are stored as virtual memory pointers
 	Page_Table* tables[1024];
 	// The representation of the page directory as expected by x86 (this is loaded in the CR3 register)
+	// This is also a list of pointers, but they are stored as physical memory pointers.
+	// The only difference here is that the last three nibbles are reserved for flags
+	// (they are not needed since all ptrs must be aligned to 0x1000).
 	u32 tables_x86_representation[1024];
 } Page_Directory;
 
 u8 available_frames_bitmap_data[AVAILABLE_FRAMES_NUM / 8];
 typedef struct {
 	Bitmap available_frames;
-	Page_Directory* page_directory;
+	Page_Directory* kernel_page_directory;
 } Paging;
 
 Paging paging;
@@ -95,10 +100,10 @@ static void create_pre_paging_page_table(u32 page_table_index) {
 	u32 page_address = KERNEL_PAGE_TABLES_ADDRESS + page_table_index * 0x1000;
 	// The page number. Serves for both virtual and physical page, since we are using an identity map.
 	u32 page_num = page_address / 0x1000;
-	paging.page_directory->tables[page_table_index] = (Page_Table*)page_address;
-	paging.page_directory->tables_x86_representation[page_table_index] = (u32)(paging.page_directory->tables[page_table_index]) | 0x7; // PRESENT, RW, US
+	paging.kernel_page_directory->tables[page_table_index] = (Page_Table*)page_address;
+	paging.kernel_page_directory->tables_x86_representation[page_table_index] = (u32)(paging.kernel_page_directory->tables[page_table_index]) | 0x7; // PRESENT, RW, US
 
-	util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
+	util_memset(paging.kernel_page_directory->tables[page_table_index], 0, sizeof(Page_Table));
 
 	// The new page table also needs a frame... In this case we call this function recursively, mapping the just configured
 	// virtual address to its corresponding physical address (they are equal)
@@ -126,11 +131,11 @@ static void create_pre_paging_mapping(u32 page_num, u32 frame_num) {
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
-	if (!paging.page_directory->tables[page_table_index]) {
+	if (!paging.kernel_page_directory->tables[page_table_index]) {
 		create_pre_paging_page_table(page_table_index);
 	}
 
-	Page_Entry* page_entry = &paging.page_directory->tables[page_table_index]->pages[page_num_within_table];
+	Page_Entry* page_entry = &paging.kernel_page_directory->tables[page_table_index]->pages[page_num_within_table];
 	util_memset(page_entry, 0, sizeof(Page_Entry));
 	bitmap_set(&paging.available_frames, frame_num);
 	page_entry->present = 1;
@@ -163,11 +168,85 @@ static void* reserve_pre_paging_aligned_space(u32 size) {
 
 /* ******************** */
 
-static s32 page_exist(u32 page_num) {
+
+static u32 get_physical_address_of_virtual_address(const Page_Directory* page_directory, u32 virtual_addr) {
+	u32 page_num = virtual_addr / 4096;
+	u32 page_offset = virtual_addr % 4096;
+	u32 table_num = page_num / 1024;
+	u32 page_index_within_table = page_num % 1024;
+	return page_directory->tables[table_num]->pages[page_index_within_table].frame_address * 0x1000 + page_offset;
+}
+// Clone the page_directory of an existing process.
+// The kernel is always linked to the first 1GB of the address space.
+// The process data, which is part of 1GB-4GB address space range, is copied, not linked.
+static u32 clone_page_directory_for_new_process(const Page_Directory* page_directory) {
+	// x86 demands that the page directory is 0x1000 aligned.
+	// Obvious question is: we are making the virtual address 0x1000 aligned, how does it help with
+	// regards to the physical addr? (which is the one consumed by x86)
+	// Answer: As long as the initial virtual address of our heap is 0x1000 aligned this should work
+	// because the heap will always start by allocating a brand new page, so both virtual address and physical adresses
+	// will always be aligned together.
+	Page_Directory* cloned_page_directory = kalloc_alloc_aligned(sizeof(Page_Directory), 0x1000);
+	util_memset(cloned_page_directory, 0, sizeof(Page_Directory));
+	u32 cloned_page_directory_physical_address = get_physical_address_of_virtual_address(paging.kernel_page_directory,
+		(u32)cloned_page_directory);
+	
+	// We start by linking the kernel in the new address space
+	// We link all page tables from 0 to 1024/4, so we account for the first 1GB of the address space.
+	for (u32 i = 0; i < 1024 / 4; ++i) {
+		// If the page table exists
+		if (page_directory->tables[i]) {
+			cloned_page_directory->tables[i] = page_directory->tables[i];
+			cloned_page_directory->tables_x86_representation[i] = page_directory->tables_x86_representation[i];
+		}
+	}
+
+	// @TODO: IMPORTANT: If the kernel creates a new page table, dynamically, we need to add it to all existing address spaces !!!
+
+	// Now, we copy all page tables from 1GB to 4GB.
+	for (u32 i = 1024 / 4; i < 1024; ++i) {
+		// If the page table exists
+		if (page_directory->tables[i]) {
+			// x86 demands that the page table is 0x1000 aligned.
+			// Obvious question is: we are making the virtual address 0x1000 aligned, how does it help with
+			// regards to the physical addr? (which is the one consumed by x86)
+			// Answer: As long as the initial virtual address of our heap is 0x1000 aligned this should work
+			// because the heap will always start by allocating a brand new page, so both virtual address and physical adresses
+			// will always be aligned together.
+			Page_Table* copied_page_table = kalloc_alloc_aligned(sizeof(Page_Table), 0x1000);
+			util_memset(copied_page_table, 0, sizeof(Page_Table));
+
+			for (u32 j = 0; j < 1024; ++j) {
+				Page_Entry* current_page_entry = &page_directory->tables[i]->pages[j];
+				if (current_page_entry) {
+					copied_page_table->pages[j] = *current_page_entry;
+					u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
+					bitmap_set(&paging.available_frames, allocd_frame);
+					paging_copy_frame(allocd_frame, current_page_entry->frame_address);
+					copied_page_table->pages[j].frame_address = allocd_frame;
+				}
+			}
+
+			cloned_page_directory->tables[i] = copied_page_table;
+			u32 copied_page_table_physical_address = get_physical_address_of_virtual_address(paging.kernel_page_directory,
+				(u32)copied_page_table);
+			cloned_page_directory->tables_x86_representation[i] = copied_page_table_physical_address | 0x7; // PRESENT, RW, US
+			printf("Old_Table_Number: %u\nOld_Table_virtual_addr:%x\nOld_Table_phys_addr:%x\n", i, page_directory->tables[i],
+				page_directory->tables_x86_representation[i] & 0xFFFFFFF8);
+			printf("New_Table_Number: %u\nNew_Table_virtual_addr:%x\nNew_Table_phys_addr:%x\n", i, cloned_page_directory->tables[i],
+				cloned_page_directory->tables_x86_representation[i] & 0xFFFFFFF8);
+			//printf("Virtual Address:%x\nPhysical Address:%x\n", (u32)copied_page_table, copied_page_table_physical_address);
+		}
+	}
+
+	return cloned_page_directory_physical_address + OFFSETOF(Page_Directory, tables_x86_representation);
+}
+
+static s32 page_exist(const Page_Directory* page_directory, u32 page_num) {
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
-	if (paging.page_directory->tables[page_table_index]) {
-		return paging.page_directory->tables[page_table_index]->pages[page_num_within_table].present;
+	if (page_directory->tables[page_table_index]) {
+		return page_directory->tables[page_table_index]->pages[page_num_within_table].present;
 	}
 	return 0;
 }
@@ -175,28 +254,28 @@ static s32 page_exist(u32 page_num) {
 // This function creates a virtual page and allocates a frame to it.
 // Can only be called if the given virtual page is not being used.
 // Returns allocd frame
-u32 paging_create_page_with_any_frame(u32 page_num) {
-	printf("allocating page num %u\n", page_num);
+static u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_num) {
+	//printf("allocating page num %u\n", page_num);
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
-	if (!paging.page_directory->tables[page_table_index]) {
+	if (!page_directory->tables[page_table_index]) {
 		u32 virtual_page_address = KERNEL_PAGE_TABLES_ADDRESS + page_table_index * 0x1000;
 		u32 virtual_page_num = virtual_page_address / 0x1000;
 
-		paging.page_directory->tables[page_table_index] = (Page_Table*)virtual_page_address;
+		page_directory->tables[page_table_index] = (Page_Table*)virtual_page_address;
 		// The new page table also needs a frame. Calls this function recursively to get the frame.
 		// @NOTE: The key here is that we know for sure that the page table used to store 'virtual_page_num' will ALWAYS exist.
 		// This is because we always pre-allocate all page tables that may be used to store other page tables.
 		// For this reason, we don't need to worry about the same page-table being referenced multiple times during recursion.
-		u32 allocd_frame = paging_create_page_with_any_frame(virtual_page_num);
-		paging.page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
-		util_memset(paging.page_directory->tables[page_table_index], 0, sizeof(Page_Table));
+		u32 allocd_frame = paging_create_page_with_any_frame(page_directory, virtual_page_num);
+		page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
+		util_memset(page_directory->tables[page_table_index], 0, sizeof(Page_Table));
 
 		printf("Allocating new table %u\n", page_table_index);
 	}
 
-	Page_Entry* page_entry = &paging.page_directory->tables[page_table_index]->pages[page_num_within_table];
+	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
 	util_assert("Trying to create page that already exists!", !page_entry->present);
 
 	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
@@ -218,13 +297,17 @@ u32 paging_create_page_with_any_frame(u32 page_num) {
 	return allocd_frame;
 }
 
+u32 paging_create_kernel_page_with_any_frame(u32 page_num) {
+	return paging_create_page_with_any_frame(paging.kernel_page_directory, page_num);
+}
+
 // Gets a page from a page directory. The page must already exist.
-static Page_Entry* get_page(u32 page_num) {
+static Page_Entry* get_page(const Page_Directory* page_directory, u32 page_num) {
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
-	util_assert("Trying to get a page from a table that is not created!", paging.page_directory->tables[page_table_index] != 0);
-	Page_Entry* page_entry = &paging.page_directory->tables[page_table_index]->pages[page_num_within_table];
+	util_assert("Trying to get a page from a table that is not created!", page_directory->tables[page_table_index] != 0);
+	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
 	util_assert("Trying to get a page that doesn't exist!", page_entry->present);
 	return page_entry;
 }
@@ -249,10 +332,10 @@ static void page_fault_handler(const Interrupt_Handler_Args* args) {
 	util_panic("Page fault");
 }
 
-static void print_all_present_pages() {
+static void print_all_present_pages(const Page_Directory* page_directory) {
 	printf("Present pages:\n");
 	for (u32 i = 0; i < 1024; ++i) {
-		Page_Table* current_page_table = paging.page_directory->tables[i];
+		Page_Table* current_page_table = page_directory->tables[i];
 		if (current_page_table) {
 			for (u32 j = 0; j < 1024; ++j) {
 				Page_Entry* page_entry = &current_page_table->pages[j];
@@ -269,7 +352,7 @@ void paging_init() {
 	bitmap_init(&paging.available_frames, available_frames_bitmap_data, AVAILABLE_FRAMES_NUM / 8);
 
 	// We allocate a page_directory for the kernel.
-	paging.page_directory = reserve_pre_paging_aligned_space(sizeof(Page_Directory));
+	paging.kernel_page_directory = reserve_pre_paging_aligned_space(sizeof(Page_Directory));
 
 	// First, we pre-allocate some necessary page-tables.
 	// We are basically allocating all the page-tables that may contain pages used by other page-tables.
@@ -329,7 +412,7 @@ void paging_init() {
 	}
 
 	// Finally, we enable paging using the kernel page directory that we just created.
-	paging_switch_page_directory(paging.page_directory->tables_x86_representation);
+	paging_switch_page_directory(paging.kernel_page_directory->tables_x86_representation);
 
 	interrupt_register_handler(page_fault_handler, 14);
 
@@ -337,4 +420,11 @@ void paging_init() {
 
 	//create_page_with_any_frame(0x4ABDF);
 	//u8 a = *(u8*)0x4ABDFFFF;	
+}
+
+// @TEMPORARY: for tests
+void test_clone() {
+	u32 cloned_page_directory_physical_addr = clone_page_directory_for_new_process(paging.kernel_page_directory);
+	paging_switch_page_directory((u32*)cloned_page_directory_physical_addr);
+	while(1);
 }

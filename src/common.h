@@ -19,4 +19,6 @@ typedef char s8;
 #define rawos_va_end(ap) ((void)(ap = (rawos_va_list)0))
 typedef char* rawos_va_list;
 
+#define OFFSETOF(st, m) ((u32)&(((st *)0)->m))
+
 #endif

@@ -6,6 +6,9 @@ Kalloc_Heap heap;
 
 void kalloc_init(u32 initial_pages) {
 	kalloc_heap_create(&heap, KERNEL_HEAP_ADDRESS, initial_pages);
+	// Allocate 1 byte so heap is not empty
+	// needed if we start by allocating aligned space
+	kalloc_alloc(1);
 	//kalloc_test(&heap); while(1);
 }
 

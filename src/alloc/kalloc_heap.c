@@ -27,7 +27,7 @@ void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) 
 	util_assert("kalloc: insufficient number of initial pages", initial_pages * PAGE_SIZE >= sizeof(Kalloc_Heap_Footer) + sizeof(Kalloc_Heap_Header));
 
 	for (u32 i = 0; i < NUM_PAGES_RESERVED_FOR_AVL + initial_pages; ++i) {
-		paging_create_page_with_any_frame(initial_addr / PAGE_SIZE + i);
+		paging_create_kernel_page_with_any_frame(initial_addr / PAGE_SIZE + i);
 	}
 
 	heap->avl_initial_addr = initial_addr;
@@ -131,8 +131,8 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size, u32 alignment) {
 		}
 	} else {
 		// If we were not able to find a fitting hole in the AVL, we need to expand the heap.
-		printf("Expanding heap... Going from %u pages to %u pages.\n", heap->size / PAGE_SIZE, heap->size / PAGE_SIZE + 1);
-		paging_create_page_with_any_frame((heap->initial_addr + heap->size) / PAGE_SIZE);
+		//printf("Expanding heap... Going from %u pages to %u pages.\n", heap->size / PAGE_SIZE, heap->size / PAGE_SIZE + 1);
+		paging_create_kernel_page_with_any_frame((heap->initial_addr + heap->size) / PAGE_SIZE);
 
 		Kalloc_Heap_Footer* last_footer = (Kalloc_Heap_Footer*)((u8*)heap->initial_addr + heap->size - sizeof(Kalloc_Heap_Footer));
 		Kalloc_Heap_Header* last_header = last_footer->header;
@@ -224,7 +224,7 @@ void kalloc_heap_print(const Kalloc_Heap* heap) {
 u32 k_addr;
 void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) {
 	for (u32 i = 0; i < KERNEL_PAGES; ++i) {
-		paging_create_page_with_any_frame(initial_addr / PAGE_SIZE + i);
+		paging_create_kernel_page_with_any_frame(initial_addr / PAGE_SIZE + i);
 	}
 	k_addr = initial_addr;
 }

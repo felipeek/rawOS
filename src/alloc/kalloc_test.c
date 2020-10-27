@@ -90,7 +90,7 @@ static void free_random_data(Kalloc_Heap* heap) {
 void kalloc_test(Kalloc_Heap* empty_heap) {
 	const u32 alloc_data_addr = 0x10000000;
 	for (u32 i = 0; i < 128; ++i) {
-		paging_create_page_with_any_frame(alloc_data_addr / 0x1000 + i);
+		paging_create_kernel_page_with_any_frame(alloc_data_addr / 0x1000 + i);
 	}
 	alloc_datas = (Allocd_Data*)alloc_data_addr;
 	alloc_datas_size = 0;

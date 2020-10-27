@@ -54,19 +54,22 @@ void read_folder(Vfs_Node* folder_node) {
 
 void main() {
 	timer_init();
-	paging_init();
 	screen_init();
-	screen_clear();
+	paging_init();
+	//screen_clear();
 	kalloc_init(1);
 
-	print_logo();
+	//print_logo();
 
 	interrupt_init();
 	keyboard_init();
 	printf("Works like a charm :)\n");
 
-	Vfs_Node* fs = initrd_init();
-	read_folder(fs);
+	test_clone();
+
+	//Vfs_Node* fs = initrd_init();
+	//read_folder(fs);
+
 
 	//kalloc_heap_print(&heap);
 
