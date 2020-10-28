@@ -10,6 +10,7 @@
 #include "fs/initrd.h"
 #include "util/printf.h"
 #include "util/util.h"
+#include "process.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -55,8 +56,8 @@ void read_folder(Vfs_Node* folder_node) {
 void main() {
 	timer_init();
 	screen_init();
+	screen_clear();
 	paging_init();
-	//screen_clear();
 	kalloc_init(1);
 
 	//print_logo();
@@ -65,11 +66,22 @@ void main() {
 	keyboard_init();
 	printf("Works like a charm :)\n");
 
-	test_clone();
+	process_init();
+	u32 pid = process_fork();
+	if (pid == 0) {
+		// child
+		while(1) {
+			printf("I am the child!\n");
+		}
+	} else {
+		// parent
+		while(1) {
+			printf("I am the parent!\n");
+		}
+	}
 
 	//Vfs_Node* fs = initrd_init();
 	//read_folder(fs);
-
 
 	//kalloc_heap_print(&heap);
 

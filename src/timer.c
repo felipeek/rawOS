@@ -2,6 +2,7 @@
 #include "asm/io.h"
 #include "util/printf.h"
 #include "interrupt.h"
+#include "process.h"
 
 #define PIT_CLOCK_FREQUENCY_HZ 1193180
 #define PIT_DATA_PORT_0 0x40
@@ -16,6 +17,8 @@ static void timer_interrupt_handler(const Interrupt_Handler_Args* args) {
 	if (tick % 100 == 0) {
 		//printf("A second has passed.\n");
 	}
+
+	process_switch();
 }
 
 void timer_init() {
