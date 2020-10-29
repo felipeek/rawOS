@@ -11,6 +11,7 @@
 #include "util/printf.h"
 #include "util/util.h"
 #include "process.h"
+#include "gdt.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -54,9 +55,10 @@ void read_folder(Vfs_Node* folder_node) {
 }
 
 void main() {
-	timer_init();
+	gdt_init();
 	screen_init();
 	screen_clear();
+	timer_init();
 	paging_init();
 	kalloc_init(1);
 
