@@ -2,7 +2,7 @@
 #include "util/util.h"
 #include "asm/gdt.h"
 
-#define GDT_NUM_ENTRIES 3
+#define GDT_NUM_ENTRIES 5
 
 // In C, lower bits come first when struct is declared this way
 // e.g.
@@ -16,24 +16,42 @@
 //
 // prints 0xFD
 typedef struct __attribute__((packed)) {
+	// 2 bytes for Segment Limit[15:00].
 	u16 segment_limit1;
+	// 2 bytes for Base[15:00]
 	u16 base1;
+	// 1 byte for Base[23:16]. Should be 0x00.
 	u8 base2;
 
+	// 1 bit for 'accessed'. CPU sets this when segment is accessed.
 	u8 accessed : 1;
+	// 1 bit for 'readable'. 1 if readable, 0 if execute-only. [IF code is 1]
+	// 1 if writable, 1 if read-only [IF code is 0]
 	u8 readable : 1;
+	// 1 bit for 'conforming'. Not conforming means code in a segment with lower privilege may not call code in this segment [IF code is 1]
+	// if code is 0, then this means 'expand down'
 	u8 conforming : 1;
+	// 1 bit for 'code'. Should be 1 for code and 0 for data.
 	u8 code : 1;
+	// Desciptor Type: (0 = system, 1 = code or data)
 	u8 descriptor_type : 1;
+	// Descriptor Privilege Level: 00: ring 0 - highest privilege. 11: ring 3 - user mode
 	u8 descriptor_privilege_level : 2;
+	// Segment Present: Segment is present in memory? (used for virtual memory)
 	u8 segment_present : 1;
 
+	// The next 4 bits are the 4 most significant bits of the segment limit (Seg. Limit[19:16]). Our limit is 0xFFFFF
 	u8 segment_limit2 : 4;
+	// AVL: Available for use by system software. Not using for now, so 0.
 	u8 avl : 1;
+	// 64-bit Code Segment: 0 for now, stick with 32 bits.
 	u8 _64bit_code_segment : 1;
+	// Default operation size: 1, because we want 32 bits.
 	u8 default_operation_size : 1;
+	// Granularity: Limit is multiplied by the page size (4K) ? (1: yes, 0: no)
 	u8 granularity : 1;
 
+	// End with Base[31:24]. The base is 0x0
 	u8 base3;
 } GDT_Entry;
 
@@ -49,21 +67,10 @@ void gdt_init() {
 	// The first entry of the GDT must be the null descriptor, so we have 8 bytes set to 0x0
 	util_memset(&gdt_entries[0], 0, sizeof(GDT_Entry));
 
-	// We start with 2 bytes for Segment Limit[15:00]. Should be 0xFFFF
+	// KERNEL CODE ENTRY
 	gdt_entries[1].segment_limit1 = 0xFFFF;
-	// Next we have 2 bytes for Base[15:00]. Should be 0x0000.
 	gdt_entries[1].base1 = 0x0000;
-	// Next we have 1 byte for Base[23:16]. Should be 0x00.
 	gdt_entries[1].base2 = 0x00;
-	// Next we have 1 bit for segment present, 2 bits for descriptor privilege level and 1 bit for descriptor type.
-	// Segment Present: 1, because the segment is present in memory (used for virtual memory)
-	// Descriptor Privilege Level: 00: ring 0 - highest privilege.
-	// Desciptor Type: (0 = system, 1 = code or data): 1, because this is the code segment.
-	// Next we have 4 bits to define the segment type, which expands in:
-	// 1 bit for 'code'. Should be 1 for code and 0 for data. 1 in this case. The meaning of the next 3 fields are different depending on if this is set to code or data.
-	// 1 bit for 'conforming'. Not conforming means code in a segment with lower privilege may not call code in this segment. Set to 0.
-	// 1 bit for 'readable'. 1 if readable, 0 if execute-only. Set to 1.
-	// 1 bit for 'accessed'. CPU sets this when segment is accessed. Set to 0.
 	gdt_entries[1].segment_present = 0b1;
 	gdt_entries[1].descriptor_privilege_level = 0b00;
 	gdt_entries[1].descriptor_type = 0b1;
@@ -71,35 +78,17 @@ void gdt_init() {
 	gdt_entries[1].conforming = 0b0;
 	gdt_entries[1].readable = 0b1;
 	gdt_entries[1].accessed = 0b0;
-	// Next, we have 4 bits for granularity, default operation size, 64-bit code segment and AVL.
-	// Granularity: 1, so our limit is multiplied by the page size (4K)
-	// Default operation size: 1, because we want 32 bits.
-	// 64-bit Code Segment: 0 for now, stick with 32 bits.
-	// AVL: Available for use by system software. Not using for now, so 0.
-	// The next 4 bits are the 4 most significant bits of the segment limit (Seg. Limit[19:16]). Our limit is 0xFFFFF
 	gdt_entries[1].granularity = 0b1;
 	gdt_entries[1].default_operation_size = 0b1;
 	gdt_entries[1]._64bit_code_segment = 0b0;
 	gdt_entries[1].avl = 0b0;
 	gdt_entries[1].segment_limit2 = 0b1111;
-	// End with Base[31:24]. The base is 0x0
 	gdt_entries[1].base3 = 0x00;
 
-	// We start with 2 bytes for Segment Limit[15:00]. Should be 0xFFFF
+	// KERNEL DATA ENTRY
 	gdt_entries[2].segment_limit1 = 0xFFFF;
-	// Next we have 2 bytes for Base[15:00]. Should be 0x0000.
 	gdt_entries[2].base1 = 0x0000;
-	// Next we have 1 byte for Base[23:16]. Should be 0x00.
 	gdt_entries[2].base2 = 0x00;
-	// Next we have 1 bit for segment present, 2 bits for descriptor privilege level and 1 bit for descriptor type.
-	// Segment Present: 1, because the segment is present in memory (used for virtual memory)
-	// Descriptor Privilege Level: 00: ring 0 - highest privilege.
-	// Desciptor Type: (0 = system, 1 = code or data): 1, because this is the code segment.
-	// Next we have 4 bits to define the segment type, which expands in:
-	// 1 bit for 'code'. Should be 1 for code and 0 for data. 0 in this case. The meaning of the next 3 fields are different depending on if this is set to code or data.
-	// 1 bit for 'expand down'. Set to 0.
-	// 1 bit for 'writable'. 1 if writable, 0 if read-only. Set to 1.
-	// 1 bit for 'accessed'. CPU sets this when segment is accessed. Set to 0.
 	gdt_entries[2].segment_present = 0b1;
 	gdt_entries[2].descriptor_privilege_level = 0b00;
 	gdt_entries[2].descriptor_type = 0b1;
@@ -107,19 +96,48 @@ void gdt_init() {
 	gdt_entries[2].conforming = 0b0;
 	gdt_entries[2].readable = 0b1;
 	gdt_entries[2].accessed = 0b0;
-	// Next, we have 4 bits for granularity, default operation size, 64-bit code segment and AVL.
-	// Granularity: 1, so our limit is multiplied by the page size (4K)
-	// Default operation size: 1, because we want 32 bits.
-	// 64-bit Code Segment: 0 for now, stick with 32 bits.
-	// AVL: Available for use by system software. Not using for now, so 0.
-	// The next 4 bits are the 4 most significant bits of the segment limit (Seg. Limit[19:16]). Our limit is 0xFFFFF
 	gdt_entries[2].granularity = 0b1;
 	gdt_entries[2].default_operation_size = 0b1;
 	gdt_entries[2]._64bit_code_segment = 0b0;
 	gdt_entries[2].avl = 0b0;
 	gdt_entries[2].segment_limit2 = 0b1111;
-	// End with Base[31:24]. The base is 0x0
 	gdt_entries[2].base3 = 0x00;
+
+	// USER-MODE CODE ENTRY
+	gdt_entries[3].segment_limit1 = 0xFFFF;
+	gdt_entries[3].base1 = 0x0000;
+	gdt_entries[3].base2 = 0x00;
+	gdt_entries[3].segment_present = 0b1;
+	gdt_entries[3].descriptor_privilege_level = 0b11;
+	gdt_entries[3].descriptor_type = 0b1;
+	gdt_entries[3].code = 0b1;
+	gdt_entries[3].conforming = 0b0;
+	gdt_entries[3].readable = 0b1;
+	gdt_entries[3].accessed = 0b0;
+	gdt_entries[3].granularity = 0b1;
+	gdt_entries[3].default_operation_size = 0b1;
+	gdt_entries[3]._64bit_code_segment = 0b0;
+	gdt_entries[3].avl = 0b0;
+	gdt_entries[3].segment_limit2 = 0b1111;
+	gdt_entries[3].base3 = 0x00;
+
+	// USER-MODE DATA ENTRY
+	gdt_entries[4].segment_limit1 = 0xFFFF;
+	gdt_entries[4].base1 = 0x0000;
+	gdt_entries[4].base2 = 0x00;
+	gdt_entries[4].segment_present = 0b1;
+	gdt_entries[4].descriptor_privilege_level = 0b11;
+	gdt_entries[4].descriptor_type = 0b1;
+	gdt_entries[4].code = 0b0;
+	gdt_entries[4].conforming = 0b0;
+	gdt_entries[4].readable = 0b1;
+	gdt_entries[4].accessed = 0b0;
+	gdt_entries[4].granularity = 0b1;
+	gdt_entries[4].default_operation_size = 0b1;
+	gdt_entries[4]._64bit_code_segment = 0b0;
+	gdt_entries[4].avl = 0b0;
+	gdt_entries[4].segment_limit2 = 0b1111;
+	gdt_entries[4].base3 = 0x00;
 
 	gdt_descriptor.base = (u32)&gdt_entries;
 	gdt_descriptor.limit = sizeof(GDT_Entry) * GDT_NUM_ENTRIES - 1;
