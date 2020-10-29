@@ -63,7 +63,7 @@ gdt_end:
 
 gdt_descriptor:
 	; The GDT descriptor describes the GDT. It starts with 16 bits to define the GDT size and ends with 32 bits specifying the GDT address.
-	dw gdt_start - gdt_end - 1
+	dw gdt_end - gdt_start - 1
 	dd gdt_start
 
 ; When running in 32-bit mode, the segment registers contain references to GDT/LDT. When accessing the GDT, they need to reference one of the
