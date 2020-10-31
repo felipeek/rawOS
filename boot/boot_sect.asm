@@ -98,7 +98,7 @@ load_kernel:
 	mov ax, KERNEL_OFFSET_REAL_MODE_SEGMENT
 	mov es, ax
 
-	mov ah, 72                  ; Number of sectors to read
+	mov ah, 80	                    ; Number of sectors to read
 									; for now load all sectors that we can, for dev purposes
 	mov al, [BOOT_DRIVE]            ; Read from boot drive
 	push ax

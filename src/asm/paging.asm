@@ -3,13 +3,20 @@ global paging_get_faulting_address
 global paging_copy_frame
 
 ; enable paging and switch to page directory received as parameter
+; NOTE (IMPORTANT): Instead of returning via 'ret', we store the returning address in ecx
+; and jmp to ecx in the end of the function.
+; This is done to avoid relying on the stack after we switch the page directory.
+; This way, even if the correct return address is not in the stack anymore after the switch,
+; we are still able to return to the caller.
+; void paging_switch_page_directory(u32 page_directory_frame_addr);
 paging_switch_page_directory:
+	mov ecx, [esp]
 	mov eax, [esp + 4]
 	mov cr3, eax
 	mov eax, cr0
 	or eax, 0x80000000
 	mov cr0, eax
-	ret
+	jmp ecx
 
 ; when we receive a page fault interrupt (INT 14), the processor puts the faulting address in register CR2
 ; this is a helper function that gets the value and returns in eax

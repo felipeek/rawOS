@@ -60,26 +60,30 @@ void main() {
 	gdt_init();
 	screen_init();
 	screen_clear();
+	print_logo();
+
 	timer_init();
 	paging_init();
 	kalloc_init(1);
-
-	print_logo();
-
 	interrupt_init();
 	keyboard_init();
 	syscall_init();
-	printf("Works like a charm :)\n");
 
-	//void* stack_addr = kalloc_alloc(2 * 1024);
-	//gdt_set_kernel_stack((u32)stack_addr);
+	printf("Kernel initialization completed.\n");
+	printf("Starting processes and switching to user-mode...\n");
+
+	process_init();
+
+	//printf("hello user-mode world!");
+	//asm volatile("int $0x80");
+	//while(1);
+
 	//process_enter_user_mode();
 	//while(1) { 
 	//	printf("asdN\n");
 	//	asm volatile("int $0x80");
 	//}
 
-		asm volatile("int $0x80");
 	//process_init();
 	//u32 pid = process_fork();
 	//if (pid == 0) {

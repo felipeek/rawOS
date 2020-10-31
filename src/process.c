@@ -6,6 +6,10 @@
 #include "util/printf.h"
 #include "asm/process.h"
 #include "gdt.h"
+#include "asm/paging.h"
+#include "util/util.h"
+
+#define PROCESS_KERNEL_STACK_SIZE 2 * 1024
 
 typedef struct Process {
 	u32 pid;
@@ -13,6 +17,12 @@ typedef struct Process {
 	u32 ebp;							// process stack base pointer
 	u32 eip;							// process instruction pointer
 	Page_Directory* page_directory;		// the page directory of this process
+	
+	// For safety, we allocate a separate kernel stack per process to treat syscalls.
+	// For now I don't think our scheduler can switch the process context when a syscall is being treated
+	// but we are doing this anyway.
+	u32 kernel_stack;
+
 	struct Process* next;
 } Process;
 
@@ -21,25 +31,67 @@ static Process* process_queue;
 static Process* current_process;
 
 void process_init() {
+	// We start by disabling interrupts
 	interrupt_disable();
 
-	// We start the process module by creating a process that represents the kernel.
-	// This is basically the "process" that is currently running, i.e., it represents our current context.
-	current_process = (Process*)kalloc_alloc(sizeof(Process));
-	// pid 1 is being used to this kernel process
-	current_process->pid = current_pid++;
-	// ESP, EBP and EIP can be set to 0, because we don't need to immediately switch to this process
-	// (since we are already this process)
-	// When we lose the CPU, then ESP, EBP and EIP will be set accordingly.
-	current_process->esp = 0;
-	current_process->ebp = 0;
-	current_process->eip = 0;
-	// The page directory of the kernel process is the kernel page directory.
-	current_process->page_directory = paging_get_kernel_page_directory();
-	current_process->next = 0;
+	// Here we need to load the bash process and start it.
+	// For now, let's load a fake process.
+	current_process = kalloc_alloc(sizeof(Process));
 	process_queue = current_process;
+	current_process->pid = current_pid++;
+	// Create kernel stack for process
+	current_process->kernel_stack = (u32)kalloc_alloc_aligned(PROCESS_KERNEL_STACK_SIZE, 0x4);
+	// For now let's clone the address space of the kernel.
+	current_process->page_directory = paging_clone_page_directory_for_new_process(paging_get_kernel_page_directory());
 
-	interrupt_enable();
+	u32 addr = paging_get_page_directory_x86_tables_frame_address(current_process->page_directory);
+
+	// NOTE(felipeek): IMPORTANT!
+	// This will modify the stack to the state it was inside the 'paging_clone_page_directory_for_new_process'
+	// function, because the address space was cloned inside that function... and the stack was copied, not linked.
+	// This works because:
+	// 1 - The function that will be called, 'paging_switch_page_directory', guarantees that it will be able to return even if
+	// the address space switch modifies the stack.
+	// 2 - Even though the stack will change, the stack frame set by this current function (process_init) is still valid, because
+	// the address space was copied inside a function that was called by this function. For this reason, since the 'esp' and 'ebp'
+	// pointers are NOT restored as part of the address space switch, we will continue pointing to the correct place in the stack,
+	// and it should be still valid and contain our values. The only thing that can mess up this process is if the stack held by this
+	// function (process_init) is modified BETWEEN the page directory cloning and the address space switch. In this case, we would
+	// lose the changes. For this reason, we need to modify one immediately after another, and avoid modifying stack values.
+	// Note that the value of 'addr' is lost after the address-space switch for this reason :)
+	paging_switch_page_directory(addr);
+
+	// @TEMPORARY: Deploy the following test code:
+	// int 0x80
+	// jmp $
+	u32 code_addr = 0x40000000;
+	u32 code_page_num = code_addr / 0x1000;
+	u32 stack_addr = 0x60000000;
+	u32 stack_page_num = stack_addr / 0x1000;
+	paging_create_page_with_any_frame(current_process->page_directory, code_page_num);
+	paging_create_page_with_any_frame(current_process->page_directory, stack_page_num);
+	paging_create_page_with_any_frame(current_process->page_directory, stack_page_num - 1);
+	paging_create_page_with_any_frame(current_process->page_directory, stack_page_num - 2);
+	u8 infinite_jmp[2];
+	infinite_jmp[1] = 0xFE;
+	infinite_jmp[0] = 0xEB;
+	u8 interruption[2];
+	interruption[1] = 0x80;
+	interruption[0] = 0xCD;
+	util_memcpy((u32*)code_addr, interruption, 2);
+	util_memcpy((u32*)((u8*)code_addr + 2), infinite_jmp, 2);
+
+	current_process->ebp = stack_addr;
+	current_process->esp = stack_addr;
+	current_process->eip = code_addr;
+	current_process->next = 0;
+
+	gdt_set_kernel_stack(current_process->kernel_stack);
+
+	// NOTE: interrupts will be re-enabled automatically by this function once we jump to user-mode.
+	// Here, we basically force the switch to user-mode and we tell the processor to use the
+	// stack defined by current_process->esp and to jump to the address defined by current_process->eip.
+	process_switch_to_user_mode_set_stack_and_jmp_addr(current_process->esp, current_process->eip);
 }
 
 s32 process_fork() {
@@ -65,6 +117,8 @@ s32 process_fork() {
 	if (current_process != new_process) {
 		// We are the parent, so we continue creating the child process
 
+		// Create kernel stack for process
+		new_process->kernel_stack = (u32)kalloc_alloc_aligned(PROCESS_KERNEL_STACK_SIZE, 0x4);
 		// Clone our page directory for the child
 		new_process->page_directory = paging_clone_page_directory_for_new_process(current_process->page_directory);
 		// Set the pid of the child
@@ -120,6 +174,8 @@ void process_switch() {
 
 	// Get the frame address of the page directory of the new process
 	u32 page_directory_x86_tables_frame_addr = paging_get_page_directory_x86_tables_frame_address(current_process->page_directory);
+
+	gdt_set_kernel_stack(current_process->kernel_stack + PROCESS_KERNEL_STACK_SIZE);
 
 	// Finally, switch the context.
 	process_switch_context(current_process->eip, current_process->esp, current_process->ebp, page_directory_x86_tables_frame_addr);
