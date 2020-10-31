@@ -55,7 +55,7 @@ static void idt_set_descriptor(IDT_Descriptor* idt_descriptor, u32 base, u16 sel
 	idt_descriptor->offset_high = (u16)((u32)base >> 16);
 	idt_descriptor->offset_low = (u16)((u32)base & 0xFFFF);
 	idt_descriptor->always0 = 0;
-	idt_descriptor->flags = IDT_INTERRUPT_GATE_FLAGS;
+	idt_descriptor->flags = IDT_INTERRUPT_GATE_FLAGS | 0x60;
 	idt_descriptor->selector = 0x08;
 }
 

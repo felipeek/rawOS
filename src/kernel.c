@@ -68,29 +68,29 @@ void main() {
 	keyboard_init();
 	printf("Works like a charm :)\n");
 
-	process_init();
-	u32 pid = process_fork();
-	if (pid == 0) {
-		// child
-		while (1) {
-			printf("I am the child!\n");
-		}
-	} else {
-		// parent
-		pid = process_fork();
-		if (pid == 0) {
-			// child
-			while (1) {
-				u8 stack_test[16] = "hello";
-				printf("I am the second child (%s)!\n", stack_test);
-			}
-		} else {
-			while (1) {
-				s32 stack_test = 3;
-				printf("I am the parent (%d)!\n", stack_test);
-			}
-		}
-	}
+	//process_init();
+	//u32 pid = process_fork();
+	//if (pid == 0) {
+	//	// child
+	//	while (1) {
+	//		printf("I am the child!\n");
+	//	}
+	//} else {
+	//	// parent
+	//	pid = process_fork();
+	//	if (pid == 0) {
+	//		// child
+	//		while (1) {
+	//			u8 stack_test[16] = "hello";
+	//			printf("I am the second child (%s)!\n", stack_test);
+	//		}
+	//	} else {
+	//		while (1) {
+	//			s32 stack_test = 3;
+	//			printf("I am the parent (%d)!\n", stack_test);
+	//		}
+	//	}
+	//}
 
 	//Vfs_Node* fs = initrd_init();
 	//read_folder(fs);

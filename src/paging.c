@@ -108,7 +108,7 @@ static void create_pre_paging_mapping(u32 page_num, u32 frame_num) {
 	util_memset(page_entry, 0, sizeof(Page_Entry));
 	bitmap_set(&paging.available_frames, frame_num);
 	page_entry->present = 1;
-	page_entry->user_mode = 0;  // for now all frames are kernel frames
+	page_entry->user_mode = 1;  // for now all frames are user frames
 	page_entry->writable = 1;   // for now all pages are writable
 	page_entry->frame_address_20_bits = frame_num;
 }
@@ -259,7 +259,7 @@ static u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32
 	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
 	bitmap_set(&paging.available_frames, allocd_frame);
 	page_entry->present = 1;
-	page_entry->user_mode = 0;  // for now all frames are kernel frames
+	page_entry->user_mode = 1;  // for now all frames are kernel frames
 	page_entry->writable = 1;   // for now all pages are writable
 	page_entry->frame_address_20_bits = allocd_frame;
 
