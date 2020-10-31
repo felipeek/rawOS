@@ -12,6 +12,8 @@
 #include "util/util.h"
 #include "process.h"
 #include "gdt.h"
+#include "syscall.h"
+#include "asm/process.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -62,12 +64,22 @@ void main() {
 	paging_init();
 	kalloc_init(1);
 
-	//print_logo();
+	print_logo();
 
 	interrupt_init();
 	keyboard_init();
+	syscall_init();
 	printf("Works like a charm :)\n");
 
+	//void* stack_addr = kalloc_alloc(2 * 1024);
+	//gdt_set_kernel_stack((u32)stack_addr);
+	//process_enter_user_mode();
+	//while(1) { 
+	//	printf("asdN\n");
+	//	asm volatile("int $0x80");
+	//}
+
+		asm volatile("int $0x80");
 	//process_init();
 	//u32 pid = process_fork();
 	//if (pid == 0) {

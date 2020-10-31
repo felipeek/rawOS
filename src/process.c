@@ -40,16 +40,6 @@ void process_init() {
 	process_queue = current_process;
 
 	interrupt_enable();
-
-	//printf("process_init: 0x%x\n", process_init);
-	//while(1);	
-
-	//u32 stack_addr = kalloc_alloc(2 * 1024);
-	//gdt_set_kernel_stack(stack_addr);
-	//process_enter_user_mode();
-	//while(1) { 
-	//	printf("asdN\n");
-	//}
 }
 
 s32 process_fork() {
