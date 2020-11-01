@@ -18,7 +18,6 @@ typedef struct Process {
 	u32 eip;							// process instruction pointer
 	Page_Directory* page_directory;		// the page directory of this process
 
-	struct Process* parent;
 	struct Process* next;
 } Process;
 
@@ -39,10 +38,7 @@ void process_init() {
 	process_queue = current_process;
 	current_process->next = 0;
 	current_process->pid = current_pid++;
-	// Create kernel stack for process
-	//current_process->kernel_stack = (u32)kalloc_alloc_aligned(PROCESS_KERNEL_STACK_SIZE, 0x4);
 	// For now let's clone the address space of the kernel.
-	current_process->parent = 0;
 	current_process->page_directory = paging_clone_page_directory_for_new_process(paging_get_kernel_page_directory());
 
 	u32 addr = paging_get_page_directory_x86_tables_frame_address(current_process->page_directory);
@@ -124,7 +120,6 @@ s32 process_fork() {
 		// Set ESP and EBP to the current ESP/EBP.
 		asm volatile("mov %%esp, %0" : "=r"(new_process->esp));
 		asm volatile("mov %%ebp, %0" : "=r"(new_process->ebp));
-		new_process->parent = current_process;
 		new_process->next = 0;
 		// We return the pid of the child to indicate to the caller that he is in the parent context, just like UNIX does.
 		return new_process->pid;

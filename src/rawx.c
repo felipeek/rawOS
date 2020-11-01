@@ -63,7 +63,6 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 			// @TODO: For now, let's alloc a single page for imports, for simplicity.
 			// In the future, we can alloc the next pages, starting at page_addr
 			paging_create_page_with_any_frame(process_page_directory, page_addr / 0x1000, 1);
-			//printf("page_addr: %u\n", page_addr / 0x1000); while(1);
 
 			u32 current_addr = page_addr;
 			for (s32 i = 0; i < symbol_count; ++i) {

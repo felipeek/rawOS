@@ -57,7 +57,7 @@ paging_copy_frame_loop:
 	pop ebp
 	ret
 
-; disables paging and copies one frame (4KB) to another
+; disables paging and compares one frame (4KB) to another
 paging_compare_frame:
 	push ebp
 	mov ebp, esp
@@ -75,9 +75,10 @@ paging_compare_frame:
 paging_compare_frame_loop:
 	mov ebx, [eax]
 	cmp ebx, [ecx]
-	je yeah
-	jmp $
-yeah:
+	je paging_compare_frame_same_frame
+	mov eax, 1
+	ret
+paging_compare_frame_same_frame:
 	add ecx, 4
 	add eax, 4
 	dec edx
@@ -90,4 +91,5 @@ yeah:
 	popf
 	pop ebx
 	pop ebp
+	mov eax, 0
 	ret
