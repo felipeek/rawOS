@@ -1,3 +1,5 @@
+#define HASH_MAP_IMPLEMENT
+#include "hash_map.h"
 #include "common.h"
 #include "screen.h"
 #include "interrupt.h"

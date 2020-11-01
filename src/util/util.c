@@ -10,6 +10,12 @@ void util_strcpy(s8* dst, const s8* src) {
 	dst[i] = 0;
 }
 
+s32 util_strlen(s8* str) {
+	s32 len = 0;
+	while (str[len]) ++len;
+	return len;
+}
+
 // For now implementation differs a bit from the CRT.
 // Simply returns 1 if different. 0 if equal.
 s32 util_strcmp(const s8* s1, const s8* s2) {

@@ -32,11 +32,13 @@ static u32 current_pid = 1;
 static Process* process_queue;
 static Process* current_process;
 
+#include "syscall.h"
+
 void process_init() {
 	// We start by disabling interrupts
 	interrupt_disable();
 
-	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "out3.rawx");
+	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "rawos_print.rawx");
 	util_assert("Unable to find rawx of root process", rawx_node != 0);
 
 	// Here we need to load the bash process and start it.
@@ -68,27 +70,18 @@ void process_init() {
 
 	u8* buffer = kalloc_alloc(rawx_node->size);
 	vfs_read(rawx_node, 0, rawx_node->size, buffer);
-	RawOS_Header* rawx_header = rawx_load(buffer, rawx_node->size, current_process->page_directory);
-
-	util_assert("stack size must be greater than 0", rawx_header->stack_size > 0);
-	u32 stack_addr = 0xC0000000;
 
 	// @NOTE: for this first process, we dont need to create the stack. We simply use the pages of the old kernel stack,
 	// which were copied to the new address space
-	//u32 stack_pages = rawx_header->stack_size / 0x1000 + 1;
-	//for (u32 i = 0; i < stack_pages; ++i) {
-	//	u32 page_num = (stack_addr / 0x1000) - i;
-	//	printf("jaisda\n");
-	//	paging_create_page_with_any_frame(current_process->page_directory, page_num);
-	//}
+	RawX_Load_Information rli = rawx_load(buffer, rawx_node->size, current_process->page_directory, 0);
+	u32 stack_addr = 0xC0000000;
 
 	current_process->ebp = stack_addr;
 	current_process->esp = stack_addr;
-	current_process->eip = rawx_header->load_address + rawx_header->entry_point_offset;
+	current_process->eip = rli.entrypoint;
 	current_process->next = 0;
 
 	gdt_set_kernel_stack(current_process->kernel_stack);
-	//printf("jasda: %x\n", current_process->eip);
 
 	// NOTE: interrupts will be re-enabled automatically by this function once we jump to user-mode.
 	// Here, we basically force the switch to user-mode and we tell the processor to use the

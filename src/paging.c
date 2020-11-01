@@ -6,7 +6,7 @@
 #include "util/printf.h"
 #include "alloc/kalloc.h"
 
-#define KERNEL_STACK_RESERVED_PAGES 128
+#define KERNEL_STACK_RESERVED_PAGES 2048
 // We can only use 3GB of PHYSICAL_RAM_SIZE because of the 3GB barrier imposed by the hardware
 // https://en.wikipedia.org/wiki/3_GB_barrier
 #define PHYSICAL_RAM_SIZE 0xC0000000
