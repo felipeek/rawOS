@@ -150,6 +150,10 @@ u32 paging_get_page_directory_x86_tables_frame_address(const Page_Directory* pag
 		+ OFFSETOF(Page_Directory, tables_x86_representation);
 }
 
+u32 paging_get_page_frame_address(const Page_Directory* page_directory, u32 page_num) {
+	return get_physical_address_of_virtual_address(page_directory, page_num * 0x1000);
+}
+
 // Clone the page_directory of an existing process.
 // The kernel is always linked to the first 1GB of the address space.
 // The process data, which is part of 1GB-4GB address space range, is copied, not linked.
@@ -186,11 +190,7 @@ Page_Directory* paging_clone_page_directory_for_new_process(const Page_Directory
 					// Allocate a new frame for the new page
 					u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
 					bitmap_set(&paging.available_frames, allocd_frame);
-					// Calculate the frame's physical address of the page that we are cloning
-					u32 current_page_frame_address = get_physical_address_of_virtual_address(page_directory,
-						current_page_entry->frame_address_20_bits * 0x1000);
-					// Copy the frame that we are cloning to the frame that we just allocated
-					paging_copy_frame(allocd_frame * 0x1000, current_page_frame_address);
+					paging_copy_frame(allocd_frame * 0x1000, current_page_entry->frame_address_20_bits << 12);
 					// Update the page entry to point to the new frame address
 					copied_page_table->pages[j].frame_address_20_bits = allocd_frame;
 					// Force page to be user-mode
@@ -218,6 +218,7 @@ Page_Directory* paging_clone_page_directory_for_new_process(const Page_Directory
 			cloned_page_directory->tables_x86_representation[i] = page_directory->tables_x86_representation[i];
 		}
 	}
+
 	return cloned_page_directory;
 }
 
@@ -291,7 +292,7 @@ static Page_Entry* get_page(const Page_Directory* page_directory, u32 page_num) 
 	return page_entry;
 }
 
-static void page_fault_handler(const Interrupt_Handler_Args* args) {
+static void page_fault_handler(Interrupt_Handler_Args* args) {
 	u32 faulting_addr = paging_get_faulting_address();
 
 	// The error code gives us details of what happened.

@@ -271,7 +271,7 @@ typedef struct {
 	u32 eip, cs, eflags, useresp, ss;                // Pushed by the processor automatically.
 } Interrupt_Handler_Args;
 
-typedef void (*Interrupt_Handler)(const Interrupt_Handler_Args*);
+typedef void (*Interrupt_Handler)(Interrupt_Handler_Args*);
 
 void interrupt_init();
 void interrupt_register_handler(Interrupt_Handler interrupt_handler, u32 interrupt_number);

@@ -3,4 +3,6 @@
 #include "../common.h"
 void syscall_print_stub(s8* str);
 extern u32 syscall_print_stub_size;
+void syscall_fork_stub(s8* str);
+extern u32 syscall_fork_stub_size;
 #endif

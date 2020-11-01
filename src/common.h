@@ -1,7 +1,7 @@
 #ifndef RAW_OS_COMMON_H
 #define RAW_OS_COMMON_H
-#define MAX(x, y) ((x > y) ? x : y)
-#define MIN(x, y) ((x < y) ? x : y)
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 typedef double r64;
 typedef float r32;
 typedef unsigned int u32;

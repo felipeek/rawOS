@@ -1,5 +1,7 @@
 #include "vfs.h"
 
+Vfs_Node* vfs_root = 0;
+
 void vfs_close(Vfs_Node* vfs_node) {
 	if (vfs_node->close) {
 		vfs_node->close(vfs_node);

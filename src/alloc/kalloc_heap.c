@@ -229,9 +229,18 @@ void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) 
 	k_addr = initial_addr;
 }
 
-void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size) {
+void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size, u32 alignment) {
+	u32 aligned_addr = (u32)k_addr;
+	if (alignment != 0) {
+		if (aligned_addr & (alignment - 1)) {
+			aligned_addr &= ~(alignment - 1);
+			aligned_addr += alignment;
+		}
+	}
+	k_addr = aligned_addr;
+
 	k_addr += size;
-	return k_addr - size;
+	return (void*)(k_addr - size);
 }
 
 void kalloc_heap_free(Kalloc_Heap* heap, void* ptr) {
