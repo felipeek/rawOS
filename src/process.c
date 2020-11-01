@@ -23,22 +23,21 @@ typedef struct Process {
 } Process;
 
 static u32 current_pid = 1;
-static Process* process_queue;
-Process* current_process;
-
-#include "syscall.h"
+static Process* process_queue = 0;
+Process* current_process = 0;
 
 void process_init() {
 	// We start by disabling interrupts
 	interrupt_disable();
 
-	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "rawos_fork.rawx");
+	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "rawos_fork_2.rawx");
 	util_assert("Unable to find rawx of root process", rawx_node != 0);
 
 	// Here we need to load the bash process and start it.
 	// For now, let's load a fake process.
 	current_process = kalloc_alloc(sizeof(Process));
 	process_queue = current_process;
+	current_process->next = 0;
 	current_process->pid = current_pid++;
 	// Create kernel stack for process
 	//current_process->kernel_stack = (u32)kalloc_alloc_aligned(PROCESS_KERNEL_STACK_SIZE, 0x4);
@@ -63,7 +62,6 @@ void process_init() {
 	// Note that the value of 'addr' is lost after the address-space switch for this reason :)
 	paging_switch_page_directory(addr);
 
-
 	u8* buffer = kalloc_alloc(rawx_node->size);
 	vfs_read(rawx_node, 0, rawx_node->size, buffer);
 
@@ -75,7 +73,6 @@ void process_init() {
 	current_process->ebp = stack_addr;
 	current_process->esp = stack_addr;
 	current_process->eip = rli.entrypoint;
-	current_process->next = 0;
 
 	gdt_set_kernel_stack(RAWX_KERNEL_STACK_ADDRESS);
 
@@ -86,7 +83,6 @@ void process_init() {
 }
 
 s32 process_fork() {
-	interrupt_disable();
 	Process* new_process = kalloc_alloc(sizeof(Process));
 
 	// For now, just add to the end of the queue.
@@ -130,7 +126,6 @@ s32 process_fork() {
 		asm volatile("mov %%ebp, %0" : "=r"(new_process->ebp));
 		new_process->parent = current_process;
 		new_process->next = 0;
-		interrupt_enable();
 		// We return the pid of the child to indicate to the caller that he is in the parent context, just like UNIX does.
 		return new_process->pid;
 	} else {
@@ -141,6 +136,10 @@ s32 process_fork() {
 
 void process_switch() {
 	if (!current_process) {
+		return;
+	}
+
+	if (!process_queue->next) {
 		return;
 	}
 

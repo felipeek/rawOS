@@ -29,15 +29,12 @@ static u32 syscall_stub_name_hash(const void *key) {
 }
 
 static void syscall_handler(Interrupt_Handler_Args* args) {
-	printf("syscall called!\n");
-
 	switch(args->eax) {
 		case 0: {
 			printf("%s", args->ebx);
 		} break;
 		case 1: {
 			args->eax = process_fork();
-			printf("reach here! (%x/%u/%x)\n", args->int_no, args->eax, &args->int_no);
 		} break;
 	}
 }
