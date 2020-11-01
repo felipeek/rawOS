@@ -11,12 +11,12 @@
 #define PIT_COMMAND_PORT 0x43
 #define TIMER_DESIRED_FREQUENCY_HZ 100
 
-static void timer_interrupt_handler(const Interrupt_Handler_Args* args) {
+static void timer_interrupt_handler(Interrupt_Handler_Args* args) {
 	static u32 tick = 0;
 	tick++;
-	if (tick % 100 == 0) {
+	if (tick % 200 == 0) {
 		//printf("A second has passed.\n");
-		//process_switch();
+		process_switch();
 	}
 }
 

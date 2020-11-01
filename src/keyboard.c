@@ -8,7 +8,7 @@
 #define KEYBOARD_STATUS_REGISTER_PORT 0x64      // Read port
 #define KEYBOARD_COMMAND_REGISTER_PORT 0x64     // Write port
 
-void keyboard_interrupt_handler(const Interrupt_Handler_Args* args) {
+void keyboard_interrupt_handler(Interrupt_Handler_Args* args) {
 	// For now we interact with the keyboard device considering it is a PS/2 Keyboard, managed by the PS/2 Controller.
 	// Nowadays they usually aren't PS/2, but for compatibility purposes, the mainboard supports USB Legacy Mode, meaning
 	// that it emulates a PS/2 keyboard, even if it is a USB keyboard.

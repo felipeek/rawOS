@@ -65,6 +65,9 @@ void main() {
 	screen_clear();
 	print_logo();
 
+	//screen_print("ç\n");
+	//While(1);
+
 	timer_init();
 	paging_init();
 	kalloc_init(1);

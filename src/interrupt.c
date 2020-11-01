@@ -375,7 +375,6 @@ void interrupt_register_handler(Interrupt_Handler interrupt_handler, u32 interru
 
 void isr_handler(Interrupt_Handler_Args args) {
 	Interrupt_Handler interrupt_handler = interrupt_handlers[args.int_no];
-
 	if (interrupt_handler) {
 		interrupt_handler(&args);
 	} else {

@@ -25,12 +25,13 @@ typedef struct Process {
 	// but we are doing this anyway.
 	u32 kernel_stack;
 
+	struct Process* parent;
 	struct Process* next;
 } Process;
 
 static u32 current_pid = 1;
 static Process* process_queue;
-static Process* current_process;
+Process* current_process;
 
 #include "syscall.h"
 
@@ -38,7 +39,7 @@ void process_init() {
 	// We start by disabling interrupts
 	interrupt_disable();
 
-	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "rawos_print.rawx");
+	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "rawos_fork.rawx");
 	util_assert("Unable to find rawx of root process", rawx_node != 0);
 
 	// Here we need to load the bash process and start it.
@@ -50,6 +51,7 @@ void process_init() {
 	current_process->kernel_stack = (u32)kalloc_alloc_aligned(PROCESS_KERNEL_STACK_SIZE, 0x4);
 	// For now let's clone the address space of the kernel.
 	current_process->page_directory = paging_clone_page_directory_for_new_process(paging_get_kernel_page_directory());
+	current_process->parent = 0;
 
 	u32 addr = paging_get_page_directory_x86_tables_frame_address(current_process->page_directory);
 
@@ -81,7 +83,8 @@ void process_init() {
 	current_process->eip = rli.entrypoint;
 	current_process->next = 0;
 
-	gdt_set_kernel_stack(current_process->kernel_stack);
+	gdt_set_kernel_stack(current_process->kernel_stack + PROCESS_KERNEL_STACK_SIZE);
+	printf("func:%x\n", process_switch_to_user_mode_set_stack_and_jmp_addr);
 
 	// NOTE: interrupts will be re-enabled automatically by this function once we jump to user-mode.
 	// Here, we basically force the switch to user-mode and we tell the processor to use the
@@ -157,7 +160,6 @@ void process_init() {
 
 s32 process_fork() {
 	interrupt_disable();
-
 	Process* new_process = kalloc_alloc(sizeof(Process));
 
 	// For now, just add to the end of the queue.
@@ -180,8 +182,14 @@ s32 process_fork() {
 
 		// Create kernel stack for process
 		new_process->kernel_stack = (u32)kalloc_alloc_aligned(PROCESS_KERNEL_STACK_SIZE, 0x4);
+		// We copy the current kernel stack to the new kernel stack.
+		// This is needed because when the new process is invoked, we wanna have the exact same stack that we have right now.
+		// We can't rely on the current kernel stack, because it belongs to the current process, and might change... and it is NOT being copied to
+		// the new address space, it is being linked, because it is part of the kernel.
+		util_memcpy((void*)new_process->kernel_stack, (void*)current_process->kernel_stack, PROCESS_KERNEL_STACK_SIZE);
 		// Clone our page directory for the child
 		new_process->page_directory = paging_clone_page_directory_for_new_process(current_process->page_directory);
+
 		// Set the pid of the child
 		new_process->pid = current_pid++;
 		// Set the EIP of the child to 'eip'. Note that this was obtained above via 'util_get_eip()'.
@@ -190,6 +198,19 @@ s32 process_fork() {
 		// Set ESP and EBP to the current ESP/EBP.
 		asm volatile("mov %%esp, %0" : "=r"(new_process->esp));
 		asm volatile("mov %%ebp, %0" : "=r"(new_process->ebp));
+		// Adjust ESP and EBP to be point to the new kernel stack, assigned to the new process.
+		// As said before, we can't use the current kernel stack, because it might be mutated when the new process
+		// is invoked...
+		if (new_process->kernel_stack > current_process->kernel_stack) {
+			new_process->esp += new_process->kernel_stack - current_process->kernel_stack;
+			new_process->ebp += new_process->kernel_stack - current_process->kernel_stack;
+		} else {
+			new_process->esp -= current_process->kernel_stack - new_process->kernel_stack;
+			new_process->ebp -= current_process->kernel_stack - new_process->kernel_stack;
+		}
+		//printf("difference: %u\n", new_process->kernel_stack - current_process->kernel_stack);
+		new_process->parent = current_process;
+		new_process->next = 0;
 		interrupt_enable();
 		// We return the pid of the child to indicate to the caller that he is in the parent context, just like UNIX does.
 		return new_process->pid;
@@ -233,10 +254,14 @@ void process_switch() {
 		current_process = process_queue;
 	}
 
+	printf("next process ebp: %x, eip: %x\n", current_process->ebp, current_process->eip);
+
 	// Get the frame address of the page directory of the new process
 	u32 page_directory_x86_tables_frame_addr = paging_get_page_directory_x86_tables_frame_address(current_process->page_directory);
 
 	gdt_set_kernel_stack(current_process->kernel_stack + PROCESS_KERNEL_STACK_SIZE);
+
+	printf("process_switch_context: %x\n", process_switch_context);
 
 	// Finally, switch the context.
 	process_switch_context(current_process->eip, current_process->esp, current_process->ebp, page_directory_x86_tables_frame_addr);

@@ -178,6 +178,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 			// @TODO: For now, let's alloc a single page for imports, for simplicity.
 			// In the future, we can alloc the next pages, starting at page_addr
 			paging_create_page_with_any_frame(process_page_directory, page_addr / 0x1000, 1);
+			//printf("page_addr: %u\n", page_addr / 0x1000); while(1);
 
 			u32 current_addr = page_addr;
 			for (s32 i = 0; i < symbol_count; ++i) {
@@ -196,6 +197,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				// set the call address!
 				*call_address = current_addr;
 				current_addr += ssi.syscall_stub_size;
+				printf("rawx: call address set for syscall %s.\n", symbol_name);
 			}
 
 			// finish by copying the section, since all call addresses are set now.
@@ -210,9 +212,11 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
     }
 
 	if (create_stack) {
-		util_assert("stack size must be greater than 0", header->stack_size > 0);
+		util_assert("rawx loader error: stack size must be greater than 0", header->stack_size > 0);
+		util_assert("rawx loader error: stack size must be 0x1000 aligned", header->stack_size % 0x1000 == 0);
 
-		u32 stack_pages = header->stack_size / 0x1000 + 1;
+		u32 stack_pages = header->stack_size / 0x1000;
+		util_assert("rawx loader error: stack too big", stack_pages <= RAWX_STACK_ADDRESS_MAX_RESERVED_PAGES);
 		for (u32 i = 0; i < stack_pages; ++i) {
 			u32 page_num = (RAWX_STACK_ADDRESS / 0x1000) - i;
 			paging_create_page_with_any_frame(process_page_directory, page_num, 1);

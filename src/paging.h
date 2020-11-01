@@ -35,8 +35,10 @@ typedef struct {
 void paging_init();
 u32 paging_create_kernel_page_with_any_frame(u32 page_num);
 u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_num, u32 user_mode);
+Page_Directory* paging_clone_page_directory_for_new_process_2(const Page_Directory* page_directory);
 Page_Directory* paging_clone_page_directory_for_new_process(const Page_Directory* page_directory);
 u32 paging_get_page_directory_x86_tables_frame_address(const Page_Directory* page_directory);
+u32 paging_get_page_frame_address(const Page_Directory* page_directory, u32 page_num);
 Page_Directory* paging_get_kernel_page_directory();
 
 #endif
