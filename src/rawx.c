@@ -70,6 +70,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				s8* symbol_name = start + imp->section_symbol_offset;
 				s8* lib_name = start + imp->section_lib_offset;
 				u32* call_address = &imp->call_address;
+				printf("rawx: found symbol %s:%s\n", symbol_name, lib_name);
 				util_assert("rawx parser error: import has unknown lib.", !util_strcmp(lib_name, "kernel"));
 
 				Syscall_Stub_Information ssi;

@@ -29,7 +29,7 @@ void process_init() {
 	// We start by disabling interrupts
 	interrupt_disable();
 
-	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "rawos_fork_2.rawx");
+	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "rawos_cursor.rawx");
 	util_assert("Unable to find rawx of root process", rawx_node != 0);
 
 	// Here we need to load the bash process and start it.

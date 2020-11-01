@@ -4,11 +4,14 @@
 #include "hash_map.h"
 #include "asm/syscall_stubs.h"
 #include "process.h"
+#include "screen.h"
 
 Hash_Map syscall_stubs;
 
 static const s8 PRINT_SYSCALL_NAME[] = "print";
 static const s8 FORK_SYSCALL_NAME[] = "fork";
+static const s8 POS_CURSOR_SYSCALL_NAME[] = "pos_cursor";
+static const s8 CLEAR_SCREEN_SYSCALL_NAME[] = "clear_screen";
 
 // Compares two keys. Needs to return 1 if the keys are equal, 0 otherwise.
 static s32 syscall_stub_name_compare(const void* _key1, const void* _key2) {
@@ -31,10 +34,20 @@ static u32 syscall_stub_name_hash(const void *key) {
 static void syscall_handler(Interrupt_Handler_Args* args) {
 	switch(args->eax) {
 		case 0: {
+			// print syscall
 			printf("%s", args->ebx);
 		} break;
 		case 1: {
+			// fork syscall
 			args->eax = process_fork();
+		} break;
+		case 2: {
+			// pos_cursor syscall
+			screen_pos_cursor(args->ebx, args->ecx);
+		} break;
+		case 3: {
+			// clear_screen syscall
+			screen_clear();
 		} break;
 	}
 }
@@ -55,6 +68,14 @@ void syscall_init() {
 	ssi.syscall_stub_address = (u32)syscall_fork_stub;
 	ssi.syscall_stub_size = syscall_fork_stub_size;
 	syscall_name = FORK_SYSCALL_NAME;
+	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
+	ssi.syscall_stub_address = (u32)syscall_pos_cursor_stub;
+	ssi.syscall_stub_size = syscall_pos_cursor_stub_size;
+	syscall_name = POS_CURSOR_SYSCALL_NAME;
+	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
+	ssi.syscall_stub_address = (u32)syscall_clear_screen_stub;
+	ssi.syscall_stub_size = syscall_clear_screen_stub_size;
+	syscall_name = CLEAR_SCREEN_SYSCALL_NAME;
 	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
 	interrupt_register_handler(syscall_handler, ISR128);
 }

@@ -64,6 +64,12 @@ static void print_at(s8 c, s32 y, s32 x) {
 	video_memory[(y * VIDEO_COLS_NUM + x) * 2 + 1] = WHITE_ON_BLACK_ATTRIBUTE;
 }
 
+void screen_pos_cursor(u32 x, u32 y) {
+	util_assert("screen: invalid cursor position.", x < VIDEO_COLS_NUM);
+	util_assert("screen: invalid cursor position.", y < VIDEO_ROWS_NUM);
+	screen.cursor_pos = VIDEO_COLS_NUM * y + x;
+}
+
 void screen_init() {
 	screen.cursor_pos = 0;
 
