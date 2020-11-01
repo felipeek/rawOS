@@ -108,7 +108,7 @@ static void create_pre_paging_mapping(u32 page_num, u32 frame_num) {
 	util_memset(page_entry, 0, sizeof(Page_Entry));
 	bitmap_set(&paging.available_frames, frame_num);
 	page_entry->present = 1;
-	page_entry->user_mode = 1;  // for now all frames are user frames
+	page_entry->user_mode = 0;  // kernel-mode pages
 	page_entry->writable = 1;   // for now all pages are writable
 	page_entry->frame_address_20_bits = frame_num;
 }
@@ -193,6 +193,8 @@ Page_Directory* paging_clone_page_directory_for_new_process(const Page_Directory
 					paging_copy_frame(allocd_frame * 0x1000, current_page_frame_address);
 					// Update the page entry to point to the new frame address
 					copied_page_table->pages[j].frame_address_20_bits = allocd_frame;
+					// Force page to be user-mode
+					copied_page_table->pages[j].user_mode = 1;
 				}
 			}
 
@@ -201,7 +203,7 @@ Page_Directory* paging_clone_page_directory_for_new_process(const Page_Directory
 			// Get the physical address of the table that we just created
 			u32 copied_page_table_physical_address = get_physical_address_of_virtual_address(paging.kernel_page_directory,
 				(u32)copied_page_table);
-			// Set the tables_x86_representation, expected by x86, to the physical address just calculated
+			// Set the tables_x86_representation, expected by x86, to the physical address just calculated (0x7 because user-mode=1)
 			cloned_page_directory->tables_x86_representation[i] = copied_page_table_physical_address | 0x7; // PRESENT, RW, US
 		}
 	}
@@ -231,7 +233,7 @@ static s32 page_exist(const Page_Directory* page_directory, u32 page_num) {
 // This function creates a virtual page and allocates a frame to it.
 // Can only be called if the given virtual page is not being used.
 // Returns allocd frame
-u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_num) {
+u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_num, u32 user_mode) {
 	//printf("allocating page num %u\n", page_num);
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
@@ -245,7 +247,7 @@ u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_n
 		// @NOTE: The key here is that we know for sure that the page table used to store 'virtual_page_num' will ALWAYS exist.
 		// This is because we always pre-allocate all page tables that may be used to store other page tables.
 		// For this reason, we don't need to worry about the same page-table being referenced multiple times during recursion.
-		u32 allocd_frame = paging_create_page_with_any_frame(page_directory, virtual_page_num);
+		u32 allocd_frame = paging_create_page_with_any_frame(page_directory, virtual_page_num, 0);
 		page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
 		util_memset(page_directory->tables[page_table_index], 0, sizeof(Page_Table));
 
@@ -258,7 +260,7 @@ u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_n
 	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
 	bitmap_set(&paging.available_frames, allocd_frame);
 	page_entry->present = 1;
-	page_entry->user_mode = 1;  // for now all frames are kernel frames
+	page_entry->user_mode = user_mode;
 	page_entry->writable = 1;   // for now all pages are writable
 	page_entry->frame_address_20_bits = allocd_frame;
 
@@ -275,7 +277,7 @@ u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_n
 }
 
 u32 paging_create_kernel_page_with_any_frame(u32 page_num) {
-	return paging_create_page_with_any_frame(paging.kernel_page_directory, page_num);
+	return paging_create_page_with_any_frame(paging.kernel_page_directory, page_num, 0);
 }
 
 // Gets a page from a page directory. The page must already exist.
@@ -355,7 +357,6 @@ void paging_init() {
 	for (u32 i = 0; i < KERNEL_STACK_RESERVED_PAGES; ++i) {
 		u32 page_num = (KERNEL_STACK_ADDRESS / 0x1000) - i;
 		create_pre_paging_mapping(page_num, page_num);
-		++page_num;
 	}
 
 	// Here we perform an identity map on the video memory.
@@ -363,7 +364,6 @@ void paging_init() {
 	for (u32 i = 0xA0000; i < 0xC0000; i += 0x1000) {
 		u32 page_num = i / 0x1000;
 		create_pre_paging_mapping(page_num, page_num);
-		++page_num;
 	}
 
 	// Here, we create pages for all the kernel code and data that is currently in RAM.
@@ -376,7 +376,6 @@ void paging_init() {
 	for (u32 i = 0; i < final_kernel_code_data_addr; i += 0x1000) {
 		u32 page_num = i / 0x1000;
 		create_pre_paging_mapping(page_num, page_num);
-		++page_num;
 	}
 
 	// @TEMPORARY: For now, let's pretend all frames below 0x100000 are used.

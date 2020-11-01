@@ -39,6 +39,9 @@ typedef struct Vfs_Node {
 	Vfs_Lookup lookup;
 } Vfs_Node;
 
+// For now, we are delegating to external modules the initialization of the vfs_root.
+Vfs_Node* vfs_root;
+
 void vfs_close(Vfs_Node* vfs_node);
 void vfs_open(Vfs_Node* vfs_node, u32 flags);
 s32 vfs_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf);

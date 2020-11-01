@@ -14,6 +14,7 @@
 #include "gdt.h"
 #include "syscall.h"
 #include "asm/process.h"
+#include "rawx.h"
 
 void print_logo() {
 	s8 logo[] =
@@ -68,6 +69,7 @@ void main() {
 	interrupt_init();
 	keyboard_init();
 	syscall_init();
+	vfs_root = initrd_init();
 
 	printf("Kernel initialization completed.\n");
 	printf("Starting processes and switching to user-mode...\n");
@@ -109,6 +111,12 @@ void main() {
 	//}
 
 	//Vfs_Node* fs = initrd_init();
+	//Vfs_Node* rawx_node = vfs_lookup(fs, "out1.rawx");
+	//printf("rawx_node: %u\n", rawx_node);
+	//u8* buffer = kalloc_alloc(1024 * 1024);
+	//s32 len = vfs_read(rawx_node, 0, 1024 * 1024, buffer);
+	//rawx_parse(buffer, len);
+	
 	//read_folder(fs);
 
 	//kalloc_heap_print(&heap);

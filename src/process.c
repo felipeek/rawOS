@@ -8,6 +8,8 @@
 #include "gdt.h"
 #include "asm/paging.h"
 #include "util/util.h"
+#include "rawx.h"
+#include "fs/vfs.h"
 
 #define PROCESS_KERNEL_STACK_SIZE 2 * 1024
 
@@ -30,6 +32,71 @@ static u32 current_pid = 1;
 static Process* process_queue;
 static Process* current_process;
 
+void process_init() {
+	// We start by disabling interrupts
+	interrupt_disable();
+
+	Vfs_Node* rawx_node = vfs_lookup(vfs_root, "out3.rawx");
+	util_assert("Unable to find rawx of root process", rawx_node != 0);
+
+	// Here we need to load the bash process and start it.
+	// For now, let's load a fake process.
+	current_process = kalloc_alloc(sizeof(Process));
+	process_queue = current_process;
+	current_process->pid = current_pid++;
+	// Create kernel stack for process
+	current_process->kernel_stack = (u32)kalloc_alloc_aligned(PROCESS_KERNEL_STACK_SIZE, 0x4);
+	// For now let's clone the address space of the kernel.
+	current_process->page_directory = paging_clone_page_directory_for_new_process(paging_get_kernel_page_directory());
+
+	u32 addr = paging_get_page_directory_x86_tables_frame_address(current_process->page_directory);
+
+	// NOTE(felipeek): IMPORTANT!
+	// This will modify the stack to the state it was inside the 'paging_clone_page_directory_for_new_process'
+	// function, because the address space was cloned inside that function... and the stack was copied, not linked.
+	// This works because:
+	// 1 - The function that will be called, 'paging_switch_page_directory', guarantees that it will be able to return even if
+	// the address space switch modifies the stack.
+	// 2 - Even though the stack will change, the stack frame set by this current function (process_init) is still valid, because
+	// the address space was copied inside a function that was called by this function. For this reason, since the 'esp' and 'ebp'
+	// pointers are NOT restored as part of the address space switch, we will continue pointing to the correct place in the stack,
+	// and it should be still valid and contain our values. The only thing that can mess up this process is if the stack held by this
+	// function (process_init) is modified BETWEEN the page directory cloning and the address space switch. In this case, we would
+	// lose the changes. For this reason, we need to modify one immediately after another, and avoid modifying stack values.
+	// Note that the value of 'addr' is lost after the address-space switch for this reason :)
+	paging_switch_page_directory(addr);
+
+	u8* buffer = kalloc_alloc(rawx_node->size);
+	vfs_read(rawx_node, 0, rawx_node->size, buffer);
+	RawOS_Header* rawx_header = rawx_load(buffer, rawx_node->size, current_process->page_directory);
+
+	util_assert("stack size must be greater than 0", rawx_header->stack_size > 0);
+	u32 stack_addr = 0xC0000000;
+
+	// @NOTE: for this first process, we dont need to create the stack. We simply use the pages of the old kernel stack,
+	// which were copied to the new address space
+	//u32 stack_pages = rawx_header->stack_size / 0x1000 + 1;
+	//for (u32 i = 0; i < stack_pages; ++i) {
+	//	u32 page_num = (stack_addr / 0x1000) - i;
+	//	printf("jaisda\n");
+	//	paging_create_page_with_any_frame(current_process->page_directory, page_num);
+	//}
+
+	current_process->ebp = stack_addr;
+	current_process->esp = stack_addr;
+	current_process->eip = rawx_header->load_address + rawx_header->entry_point_offset;
+	current_process->next = 0;
+
+	gdt_set_kernel_stack(current_process->kernel_stack);
+	//printf("jasda: %x\n", current_process->eip);
+
+	// NOTE: interrupts will be re-enabled automatically by this function once we jump to user-mode.
+	// Here, we basically force the switch to user-mode and we tell the processor to use the
+	// stack defined by current_process->esp and to jump to the address defined by current_process->eip.
+	process_switch_to_user_mode_set_stack_and_jmp_addr(current_process->esp, current_process->eip);
+}
+
+/*
 void process_init() {
 	// We start by disabling interrupts
 	interrupt_disable();
@@ -93,6 +160,7 @@ void process_init() {
 	// stack defined by current_process->esp and to jump to the address defined by current_process->eip.
 	process_switch_to_user_mode_set_stack_and_jmp_addr(current_process->esp, current_process->eip);
 }
+*/
 
 s32 process_fork() {
 	interrupt_disable();
