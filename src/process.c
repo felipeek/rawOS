@@ -178,11 +178,8 @@ void process_switch() {
 void process_link_kernel_table_to_all_address_spaces(u32 page_table_virtual_address, u32 page_table_index, u32 page_table_x86_representation) {
 	// For now, just add to the end of the queue.
 	Process* current_process = process_list;
-	if (!current_process) {
-		return;
-	}
 
-	while (current_process->next) {
+	while (current_process) {
 		Page_Directory* current_process_page_directory = current_process->page_directory;
 		current_process_page_directory->tables[page_table_index] = (Page_Table*)page_table_virtual_address;
 		current_process_page_directory->tables_x86_representation[page_table_index] = page_table_x86_representation;
