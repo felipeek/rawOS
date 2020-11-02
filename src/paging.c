@@ -162,7 +162,9 @@ void paging_clean_all_non_kernel_pages_from_page_directory(Page_Directory* page_
 				Page_Entry* page_entry = &current_table->pages[j];
 				u32 page_num = i * 1024 + j;
 				if (page_entry->present) {
-					util_assert("page is present, but no frame is allocd?", bitmap_get(&paging.available_frames, page_entry->frame_address_20_bits));
+					util_assert(bitmap_get(&paging.available_frames, page_entry->frame_address_20_bits),
+						"Page %u (0x%x) is present, but its frame (0x%x) is not allocd!",
+						page_num, page_num * 0x1000, page_entry->frame_address_20_bits * 0x1000);
 					if (!is_page_part_of_kernel_stack_in_process_address_space(page_num)) {
 						bitmap_clear(&paging.available_frames, page_entry->frame_address_20_bits);
 						util_memset(page_entry, 0, sizeof(Page_Entry));
@@ -279,7 +281,7 @@ u32 paging_create_process_page_with_any_frame(Page_Directory* page_directory, u3
 	}
 
 	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
-	util_assert("Trying to create page that already exists!", !page_entry->present);
+	util_assert(!page_entry->present, "Trying to create page that already exists (%u) (0x%x)!", page_num, page_num * 0x1000);
 
 	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
 	bitmap_set(&paging.available_frames, allocd_frame);
@@ -295,7 +297,7 @@ u32 paging_create_process_page_with_any_frame(Page_Directory* page_directory, u3
 	u8* test = (u8*)(page_num * 0x1000);
 	*test = 0xAB;
 	//printf("Page: %x\n", allocd_frame * 0x1000);
-	util_assert("A non-addressable frame was chosen!", *test == 0xAB);
+	util_assert(*test == 0xAB, "A non-addressable frame was chosen: %u (0x%x)!", allocd_frame, allocd_frame * 0x1000);
 
 	return allocd_frame;
 }
@@ -327,7 +329,7 @@ u32 paging_create_kernel_page_with_any_frame(u32 page_num) {
 	}
 
 	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
-	util_assert("Trying to create page that already exists!", !page_entry->present);
+	util_assert(!page_entry->present, "Trying to create page that already exists (%u) (0x%x)!", page_num, page_num * 0x1000);
 
 	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
 	bitmap_set(&paging.available_frames, allocd_frame);
@@ -343,7 +345,7 @@ u32 paging_create_kernel_page_with_any_frame(u32 page_num) {
 	u8* test = (u8*)(page_num * 0x1000);
 	*test = 0xAB;
 	//printf("Page: %x\n", allocd_frame * 0x1000);
-	util_assert("A non-addressable frame was chosen!", *test == 0xAB);
+	util_assert(*test == 0xAB, "A non-addressable frame was chosen: %u (0x%x)!", allocd_frame, allocd_frame * 0x1000);
 
 	return allocd_frame;
 }
@@ -353,9 +355,10 @@ static Page_Entry* get_page(const Page_Directory* page_directory, u32 page_num) 
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
-	util_assert("Trying to get a page from a table that is not created!", page_directory->tables[page_table_index] != 0);
+	util_assert(page_directory->tables[page_table_index] != 0, "Trying to get page %u (0x%x) from a table that is not created (%u)!",
+		page_num, page_num * 0x1000, page_table_index);
 	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
-	util_assert("Trying to get a page that doesn't exist!", page_entry->present);
+	util_assert(page_entry->present, "Trying to get a page (%u) (0x%x) that doesn't exist!", page_num, page_num * 0x1000);
 	return page_entry;
 }
 
@@ -412,7 +415,8 @@ void paging_init() {
 	// but we didn't pre-allocate page-table 1. Then, we need to create a page that falls in page-table 1. In this case, we then try
 	// to allocate a page to store page table 1, but then we find out that the page table 1 page also falls in page table 1! In this
 	// case we are screwed, since we can never write to that page, because we don't have a virtual address to use.
-	util_assert("The virtual address of kernel page tables must be multiple of 0x1000", KERNEL_PAGE_TABLES_ADDRESS % 0x1000 == 0);
+	util_assert(KERNEL_PAGE_TABLES_ADDRESS % 0x1000 == 0, "The virtual address of kernel page tables must be multiple of 0x1000!");
+
 	u32 first_page_table_index = (KERNEL_PAGE_TABLES_ADDRESS / 0x1000) / 1024;
 	u32 last_page_table_index = ((KERNEL_PAGE_TABLES_ADDRESS + 0x400000) / 0x1000) / 1024;
 	printf("Pre-creating page tables from %u to %u.\n", first_page_table_index, last_page_table_index);

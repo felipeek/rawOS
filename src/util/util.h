@@ -5,6 +5,6 @@ s32 util_strlen(s8* str);
 s32 util_strcmp(const s8* s1, const s8* s2);
 void util_memcpy(void* dst, const void* src, u32 size);
 void util_memset(void* ptr, u8 value, u32 num);
-void util_assert(const s8* message, s32 condition);
+void util_assert(s32 condition, const s8* message, ...);
 void util_panic(const s8* message);
 #endif

@@ -57,14 +57,14 @@ void bitmap_init(Bitmap* bitmap, u8* data, u32 size) {
 void bitmap_set(Bitmap* bitmap, u32 index) {
 	u32 bitmap_index = index / 8;
 	u32 bitmap_bit = index % 8;
-	util_assert("bitmap_set: bitmap_index < bitmap_size", bitmap_index < bitmap->size * 8);
+	util_assert(bitmap_index < bitmap->size * 8, "bitmap_set: bitmap_index < bitmap->size * 8 (%u < %u)", bitmap_index, bitmap->size * 8);
 	bitmap->data[bitmap_index] |= (1 << bitmap_bit);
 }
 
 void bitmap_clear(Bitmap* bitmap, u32 index) {
 	u32 bitmap_index = index / 8;
 	u32 bitmap_bit = index % 8;
-	util_assert("bitmap_clear: bitmap_index < bitmap_size", bitmap_index < bitmap->size * 8);
+	util_assert(bitmap_index < bitmap->size * 8, "bitmap_clear: bitmap_index < bitmap->size * 8 (%u < %u)", bitmap_index, bitmap->size * 8);
 	bitmap->data[bitmap_index] &= ~(1 << bitmap_bit);
 }
 
@@ -83,6 +83,6 @@ u32 bitmap_get_first_clear(const Bitmap* bitmap) {
 u32 bitmap_get(const Bitmap* bitmap, u32 index) {
 	u32 bitmap_index = index / 8;
 	u32 bitmap_bit = index % 8;
-	util_assert("bitmap_get: bitmap_index < bitmap_size", bitmap_index < bitmap->size * 8);
+	util_assert(bitmap_index < bitmap->size * 8, "bitmap_get: bitmap_index < bitmap->size * 8 (%u < %u)", bitmap_index, bitmap->size * 8);
 	return (bitmap->data[bitmap_index] & (1 << bitmap_bit)) != 0;
 }

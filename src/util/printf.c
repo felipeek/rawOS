@@ -103,7 +103,7 @@ static void print_hexadecimal(u32 value) {
 	screen_print(mem);
 }
 
-static void printf_list(const s8 *str, rawos_va_list args) {
+void vprintf(const s8 *str, rawos_va_list args) {
 	for (const s8 *at = str; *at != 0; ++at) {
 		if (*at == '%') {
 			++at; // skip
@@ -142,7 +142,7 @@ void printf(const s8* str, ...) {
 	rawos_va_list args;
 	rawos_va_start(args, str);
 
-	printf_list(str, args);
+	vprintf(str, args);
 
 	rawos_va_end(args);
 }

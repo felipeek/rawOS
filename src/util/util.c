@@ -42,9 +42,14 @@ void util_memset(void* ptr, u8 value, u32 num) {
 	}
 }
 
-void util_assert(const s8* message, s32 condition) {
+void util_assert(s32 condition, const s8* message, ...) {
 	if (!condition) {
-		printf("Assert failed: %s\n", message);
+		printf("Assert failed: ");
+		rawos_va_list args;
+		rawos_va_start(args, message);
+		vprintf(message, args);
+		rawos_va_end(args);
+		printf("\n");
 		util_panic("Assert failed");
 	}
 }

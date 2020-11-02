@@ -18,7 +18,7 @@ static s32 compare_hole(u32 h1_size, void* h1_addr, u32 h2_size, void* h2_addr) 
 }
 
 void kalloc_avl_init(Kalloc_AVL* avl, void* data, u32 data_size) {
-	util_assert("kalloc_avl: can't initiate. data_size must be greater or equal to the size of the node", data_size >= sizeof(Kalloc_AVL_Node));
+	util_assert(data_size >= sizeof(Kalloc_AVL_Node), "kalloc_avl: can't initiate. data_size must be greater or equal to the size of the node");
 	u32 num_nodes = data_size / sizeof(Kalloc_AVL_Node);
 	for (u32 i = 0; i < num_nodes; ++i) {
 		Kalloc_AVL_Node* previous = (i > 0) ? (Kalloc_AVL_Node*)data + i - 1 : 0;
@@ -37,9 +37,9 @@ void kalloc_avl_init(Kalloc_AVL* avl, void* data, u32 data_size) {
 
 static Kalloc_AVL_Node* get_free_node(Kalloc_AVL* avl) {
 	Kalloc_AVL_Node* target = avl->free;
-	util_assert("kalloc_avl: no free node available", target != 0);
+	util_assert(target != 0, "kalloc_avl: no free node available");
 	if (avl->free->right) {
-		util_assert("kalloc_avl: next node is not pointing to current", avl->free->right->left == target);
+		util_assert(avl->free->right->left == target, "kalloc_avl: next node is not pointing to current");
 		avl->free->right->left = 0;
 	}
 	avl->free = avl->free->right;
@@ -52,7 +52,7 @@ static void put_free_node(Kalloc_AVL* avl, Kalloc_AVL_Node* node) {
 	avl->free->left = 0;
 	avl->free->right = previous_root;
 	if (previous_root) {
-		util_assert("kalloc_avl: previous root free node had something on the left", previous_root->left == 0);
+		util_assert(previous_root->left == 0, "kalloc_avl: previous root free node had something on the left");
 		previous_root->left = avl->free;
 	}
 }
@@ -190,12 +190,12 @@ static Kalloc_AVL_Node* insert_internal(Kalloc_AVL* avl, Kalloc_AVL_Node* avl_no
 
 	Kalloc_AVL_Node* new_root = avl_node;
 	s32 comparison = compare_hole(hole_size, hole_addr, avl_node->hole_size, avl_node->hole_addr);
-	util_assert("heap_avl: Trying to insert same element to AVL.", comparison != 0);
+	util_assert(comparison != 0, "heap_avl: Trying to insert same element to AVL.");
 	if (comparison > 0) {
 		avl_node->right = insert_internal(avl, avl_node->right, hole_size, hole_addr, subtree_height_changed, error);
 		if (*subtree_height_changed) {
 			s32 balance_factor = get_balance_factor(avl_node);
-			util_assert("heap_avl: balance_factor >= 0 && balance_factor <= 2", balance_factor >= 0 && balance_factor <= 2);
+			util_assert(balance_factor >= 0 && balance_factor <= 2, "heap_avl: balance_factor must be between 0 and 2, but got %u", balance_factor);
 			if (balance_factor == 0) {
 				*subtree_height_changed = 0;
 			} else if (balance_factor == 1) {
@@ -215,7 +215,7 @@ static Kalloc_AVL_Node* insert_internal(Kalloc_AVL* avl, Kalloc_AVL_Node* avl_no
 		avl_node->left = insert_internal(avl, avl_node->left, hole_size, hole_addr, subtree_height_changed, error);
 		if (*subtree_height_changed) {
 			s32 balance_factor = get_balance_factor(avl_node);
-			util_assert("heap_avl: balance_factor >= -2 && balance_factor <= 0", balance_factor >= -2 && balance_factor <= 0);
+			util_assert(balance_factor >= -2 && balance_factor <= 0, "heap_avl: balance_factor must be between -2 and 0, but got %u", balance_factor);
 			if (balance_factor == 0) {
 				*subtree_height_changed = 0;
 			} else if (balance_factor == -1) {
@@ -295,7 +295,7 @@ static Kalloc_AVL_Node* remove_internal(Kalloc_AVL* avl, Kalloc_AVL_Node* avl_no
 		avl_node->right = remove_internal(avl, avl_node->right, hole_size, hole_addr, subtree_height_changed, not_found);
 		if (*subtree_height_changed) {
 			s32 balance_factor = get_balance_factor(avl_node);
-			util_assert("heap_avl: balance_factor >= -2 && balance_factor <= 0", balance_factor >= -2 && balance_factor <= 0);
+			util_assert(balance_factor >= -2 && balance_factor <= 0, "heap_avl: balance_factor must be between -2 and 0, but got %u", balance_factor);
 			if (balance_factor == 0) {
 				*subtree_height_changed = 1;
 				--avl_node->height;
@@ -320,7 +320,7 @@ static Kalloc_AVL_Node* remove_internal(Kalloc_AVL* avl, Kalloc_AVL_Node* avl_no
 		avl_node->left = remove_internal(avl, avl_node->left, hole_size, hole_addr, subtree_height_changed, not_found);
 		if (*subtree_height_changed) {
 			s32 balance_factor = get_balance_factor(avl_node);
-			util_assert("heap_avl: balance_factor >= 0 && balance_factor <= 2", balance_factor >= 0 && balance_factor <= 2);
+			util_assert(balance_factor >= 0 && balance_factor <= 2, "heap_avl: balance_factor must be between 0 and 2, but got %u", balance_factor);
 			if (balance_factor == 0) {
 				*subtree_height_changed = 1;
 				--avl_node->height;

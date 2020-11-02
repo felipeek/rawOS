@@ -26,7 +26,7 @@ static s32 initrd_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf) {
 }
 
 static s32 initrd_readdir(Vfs_Node* vfs_node, u32 index, Vfs_Dirent* dirent) {
-	util_assert("initrd_readdir called for node that is not the root node", vfs_node == initrd_root_node);
+	util_assert(vfs_node == initrd_root_node, "initrd_readdir called for node that is not the root node");
 	if (index >= num_files) {
 		return -1;
 	}

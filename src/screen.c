@@ -65,8 +65,8 @@ static void print_at(s8 c, s32 y, s32 x) {
 }
 
 void screen_pos_cursor(u32 x, u32 y) {
-	util_assert("screen: invalid cursor position.", x < VIDEO_COLS_NUM);
-	util_assert("screen: invalid cursor position.", y < VIDEO_ROWS_NUM);
+	util_assert(x < VIDEO_COLS_NUM, "error setting screen X cursor position: %u must be smaller than %u.", x, VIDEO_COLS_NUM);
+	util_assert(y < VIDEO_ROWS_NUM, "error setting screen Y cursor position: %u must be smaller than %u.", y, VIDEO_ROWS_NUM);
 	screen.cursor_pos = VIDEO_COLS_NUM * y + x;
 }
 
