@@ -40,8 +40,8 @@ static void syscall_handler(Interrupt_Handler_Args* args) {
 			printf("%s", args->ebx);
 		} break;
 		case 1: {
-			// fork syscall
-			args->eax = process_fork();
+			// exit syscall
+			process_exit(args->ebx);
 		} break;
 		case 2: {
 			// pos_cursor syscall
@@ -56,8 +56,8 @@ static void syscall_handler(Interrupt_Handler_Args* args) {
 			process_execve((s8*)args->ebx);
 		} break;
 		case 5: {
-			// exit syscall
-			process_exit(args->ebx);
+			// fork syscall
+			args->eax = process_fork();
 		} break;
 	}
 }
@@ -75,9 +75,9 @@ void syscall_init() {
 	ssi.syscall_stub_size = syscall_print_stub_size;
 	syscall_name = PRINT_SYSCALL_NAME;
 	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
-	ssi.syscall_stub_address = (u32)syscall_fork_stub;
-	ssi.syscall_stub_size = syscall_fork_stub_size;
-	syscall_name = FORK_SYSCALL_NAME;
+	ssi.syscall_stub_address = (u32)syscall_exit_stub;
+	ssi.syscall_stub_size = syscall_exit_stub_size;
+	syscall_name = EXIT_SYSCALL_NAME;
 	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
 	ssi.syscall_stub_address = (u32)syscall_pos_cursor_stub;
 	ssi.syscall_stub_size = syscall_pos_cursor_stub_size;
@@ -91,9 +91,9 @@ void syscall_init() {
 	ssi.syscall_stub_size = syscall_execve_stub_size;
 	syscall_name = EXECVE_SYSCALL_NAME;
 	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
-	ssi.syscall_stub_address = (u32)syscall_exit_stub;
-	ssi.syscall_stub_size = syscall_exit_stub_size;
-	syscall_name = EXIT_SYSCALL_NAME;
+	ssi.syscall_stub_address = (u32)syscall_fork_stub;
+	ssi.syscall_stub_size = syscall_fork_stub_size;
+	syscall_name = FORK_SYSCALL_NAME;
 	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
 	interrupt_register_handler(syscall_handler, ISR128);
 }
