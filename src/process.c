@@ -10,7 +10,7 @@
 #include "rawx.h"
 #include "fs/vfs.h"
 
-#define INITIAL_PROCESS "rawos_execve.rawx"
+#define INITIAL_PROCESS "rawos_exit.rawx"
 
 typedef struct Process {
 	u32 pid;
@@ -19,13 +19,11 @@ typedef struct Process {
 	u32 eip;							// process instruction pointer
 	Page_Directory* page_directory;		// the page directory of this process
 
+	struct Process* previous;
 	struct Process* next;
 } Process;
 
 static u32 current_pid = 1;
-// NOTE: for now 'process_list' must contain a reference to ALL processes, since we rely on it
-// (e.g. process_link_kernel_table_to_all_address_spaces)
-static Process* process_list = 0;
 Process* active_process = 0;
 
 void process_init() {
@@ -38,8 +36,8 @@ void process_init() {
 	// Here we need to load the bash process and start it.
 	// For now, let's load a fake process.
 	active_process = kalloc_alloc(sizeof(Process));
-	process_list = active_process;
-	active_process->next = 0;
+	active_process->previous = active_process;
+	active_process->next = active_process;
 	active_process->pid = current_pid++;
 	// For now let's clone the address space of the kernel.
 	active_process->page_directory = paging_clone_page_directory_for_new_process(paging_get_kernel_page_directory());
@@ -82,12 +80,12 @@ void process_init() {
 s32 process_fork() {
 	Process* new_process = kalloc_alloc(sizeof(Process));
 
-	// For now, just add to the end of the queue.
-	Process* aux = process_list;
-	while (aux->next) {
-		aux = aux->next;
-	}
-	aux->next = new_process;
+	// Add the new process to the process list.
+	Process* previous = active_process->previous;
+	previous->next = new_process;
+	new_process->previous = previous;
+	active_process->previous = new_process;
+	new_process->next = active_process;
 
 	// We get the current eip. This eip will be assigned to the new process.
 	u32 eip = util_get_eip();
@@ -121,7 +119,6 @@ s32 process_fork() {
 		// Set ESP and EBP to the current ESP/EBP.
 		asm volatile("mov %%esp, %0" : "=r"(new_process->esp));
 		asm volatile("mov %%ebp, %0" : "=r"(new_process->ebp));
-		new_process->next = 0;
 		// We return the pid of the child to indicate to the caller that he is in the parent context, just like UNIX does.
 		return new_process->pid;
 	} else {
@@ -156,12 +153,37 @@ void process_execve(const s8* image_path) {
 	process_switch_to_user_mode_set_stack_and_jmp_addr(active_process->esp, active_process->eip);
 }
 
+void process_exit(u32 ret) {
+	printf("Exiting from process %u with return value %u...\n", active_process->pid, ret);
+	paging_clean_all_non_kernel_pages_from_page_directory(active_process->page_directory);
+
+	Process* process_exiting = active_process;
+	active_process = active_process->next;
+
+	process_exiting->next->previous = process_exiting->previous;
+	process_exiting->previous->next = process_exiting->next;
+	kalloc_free(process_exiting);
+
+	if (active_process == process_exiting) {
+		// We just destroyed the last process...
+		printf("The last running process was destroyed... halting kernel.");
+		asm volatile("hlt");
+	}
+
+	// Get the frame address of the page directory of the new process
+	u32 page_directory_x86_tables_frame_addr = paging_get_page_directory_x86_tables_frame_address(active_process->page_directory);
+
+	// Finally, switch the context.
+	process_switch_context(active_process->eip, active_process->esp, active_process->ebp, page_directory_x86_tables_frame_addr);
+}
+
 void process_switch() {
 	if (!active_process) {
 		return;
 	}
 
-	if (!process_list->next) {
+	// @TEMPORARY
+	if (!active_process->next) {
 		return;
 	}
 
@@ -190,9 +212,6 @@ void process_switch() {
 
 	// Change 'active_process' to the next one.
 	active_process = active_process->next;
-	if (!active_process) {
-		active_process = process_list;
-	}
 
 	// Get the frame address of the page directory of the new process
 	u32 page_directory_x86_tables_frame_addr = paging_get_page_directory_x86_tables_frame_address(active_process->page_directory);
@@ -202,13 +221,15 @@ void process_switch() {
 }
 
 void process_link_kernel_table_to_all_address_spaces(u32 page_table_virtual_address, u32 page_table_index, u32 page_table_x86_representation) {
-	// For now, just add to the end of the queue.
-	Process* current_process = process_list;
+	assert(active_process != 0, "Can't link kernel table to all address spaces: there is no active process.");
 
-	while (current_process) {
+	// For now, just add to the end of the queue.
+	Process* current_process = active_process;
+
+	do {
 		Page_Directory* current_process_page_directory = current_process->page_directory;
 		current_process_page_directory->tables[page_table_index] = (Page_Table*)page_table_virtual_address;
 		current_process_page_directory->tables_x86_representation[page_table_index] = page_table_x86_representation;
 		current_process = current_process->next;
-	}
+	} while (current_process != active_process);
 }

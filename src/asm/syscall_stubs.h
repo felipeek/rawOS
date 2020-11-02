@@ -11,4 +11,6 @@ void syscall_clear_screen_stub();
 extern u32 syscall_clear_screen_stub_size;
 void syscall_execve_stub();
 extern u32 syscall_execve_stub_size;
+void syscall_exit_stub();
+extern u32 syscall_exit_stub_size;
 #endif
