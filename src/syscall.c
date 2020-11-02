@@ -18,7 +18,7 @@ static const s8 EXECVE_SYSCALL_NAME[] = "execve";
 static s32 syscall_stub_name_compare(const void* _key1, const void* _key2) {
 	s8* key1 = *(s8**)_key1;
 	s8* key2 = *(s8**)_key2;
-	return !util_strcmp(key1, key2);
+	return !strcmp(key1, key2);
 }
 
 // Calculates the hash of the key.

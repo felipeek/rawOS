@@ -40,7 +40,7 @@ void read_folder(Vfs_Node* folder_node) {
 		printf("Found file: %s\n", dirent.name);
 
 		Vfs_Node* node = vfs_lookup(folder_node, dirent.name);
-		util_assert(node != 0, "Lookup of file %s returned null node!", dirent.name);
+		assert(node != 0, "Lookup of file %s returned null node!", dirent.name);
 
 		printf("Content: ");
 

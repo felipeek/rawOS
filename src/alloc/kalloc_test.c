@@ -37,10 +37,10 @@ static void check_heap(const Kalloc_Heap* heap) {
 	Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)heap->initial_addr;
 	while ((u8*)header < ((u8*)heap->initial_addr + heap->size)) {
 		Kalloc_Heap_Footer* footer = (Kalloc_Heap_Footer*)((u8*)header + sizeof(Kalloc_Heap_Header) + header->size);
-		util_assert(footer->header == header, "footer->header == header (0x%u == 0x%u)", footer->header, header);
-		util_assert(footer->magic == HEAP_FOOTER_MAGIC, "footer->magic == HEAP_FOOTER_MAGIC (0x%u == 0x%u)", footer->magic, HEAP_FOOTER_MAGIC);
-		util_assert(header->magic == HEAP_HEADER_MAGIC, "header->magic == HEAP_HEADER_MAGIC (0x%u == 0x%u)", header->magic, HEAP_HEADER_MAGIC);
-		util_assert(header->used == 0 || header->used == 1, "header->used == 0 || header->used == 1 (but is %u)", header->used);
+		assert(footer->header == header, "footer->header == header (0x%u == 0x%u)", footer->header, header);
+		assert(footer->magic == HEAP_FOOTER_MAGIC, "footer->magic == HEAP_FOOTER_MAGIC (0x%u == 0x%u)", footer->magic, HEAP_FOOTER_MAGIC);
+		assert(header->magic == HEAP_HEADER_MAGIC, "header->magic == HEAP_HEADER_MAGIC (0x%u == 0x%u)", header->magic, HEAP_HEADER_MAGIC);
+		assert(header->used == 0 || header->used == 1, "header->used == 0 || header->used == 1 (but is %u)", header->used);
 		header = (Kalloc_Heap_Header*)((u8*)header + sizeof(Kalloc_Heap_Header) + header->size + sizeof(Kalloc_Heap_Footer));
 	}
 
@@ -48,7 +48,7 @@ static void check_heap(const Kalloc_Heap* heap) {
 	for (u32 i = 0; i < alloc_datas_size; ++i) {
 		Allocd_Data current = alloc_datas[i];
 		for (u32 j = i + 1; j < alloc_datas_size; ++j) {
-			util_assert(current.ptr != alloc_datas[j].ptr, "current.ptr != alloc_datas[j].ptr (0x%u != 0x%u)", current.ptr, alloc_datas[j].ptr);
+			assert(current.ptr != alloc_datas[j].ptr, "current.ptr != alloc_datas[j].ptr (0x%u != 0x%u)", current.ptr, alloc_datas[j].ptr);
 		}
 	}
 
@@ -56,7 +56,7 @@ static void check_heap(const Kalloc_Heap* heap) {
 	for (u32 i = 0; i < alloc_datas_size; ++i) {
 		Allocd_Data current = alloc_datas[i];
 		Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)((u8*)current.ptr - sizeof(Kalloc_Heap_Header));
-		util_assert(header->magic == HEAP_HEADER_MAGIC, "header->magic == HEAP_HEADER_MAGIC (0x%u == 0x%u)", header->magic, HEAP_HEADER_MAGIC);
+		assert(header->magic == HEAP_HEADER_MAGIC, "header->magic == HEAP_HEADER_MAGIC (0x%u == 0x%u)", header->magic, HEAP_HEADER_MAGIC);
 	}
 }
 
@@ -64,7 +64,7 @@ static void alloc_data(Kalloc_Heap* heap, u32 size, u32 alignment) {
 	Allocd_Data ad;
 	ad.ptr = kalloc_heap_alloc(heap, size, alignment);
 	if (alignment != 0) {
-		util_assert((u32)ad.ptr % alignment == 0, "tried to allocate aligned data, but received data was not aligned (received 0x%u)", ad.ptr);
+		assert((u32)ad.ptr % alignment == 0, "tried to allocate aligned data, but received data was not aligned (received 0x%u)", ad.ptr);
 	}
 	ad.size = size;
 	alloc_datas[alloc_datas_size++] = ad;

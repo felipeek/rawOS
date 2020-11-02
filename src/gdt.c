@@ -110,7 +110,7 @@ static TSS_Entry tss_entry;
 
 void gdt_init() {
 	// The first entry of the GDT must be the null descriptor, so we have 8 bytes set to 0x0
-	util_memset(&gdt_entries[0], 0, sizeof(GDT_Entry));
+	memset(&gdt_entries[0], 0, sizeof(GDT_Entry));
 
 	// KERNEL CODE ENTRY
 	gdt_entries[1].segment_limit1 = 0xFFFF;
@@ -204,7 +204,7 @@ void gdt_init() {
 	gdt_entries[5].segment_limit2 = ((tss_limit >> 16) & 0xF);
 	gdt_entries[5].base3 = ((tss_base >> 24) & 0xFF);
 
-	util_memset(&tss_entry, 0, sizeof(TSS_Entry));
+	memset(&tss_entry, 0, sizeof(TSS_Entry));
 
 	// @TODO: make defines for 0x10 (data seg), 0x08 (code seg), and 0x3 (RPL 3)
 	tss_entry.ss0 = 0x10;

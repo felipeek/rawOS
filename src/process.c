@@ -33,7 +33,7 @@ void process_init() {
 	interrupt_disable();
 
 	Vfs_Node* rawx_node = vfs_lookup(vfs_root, INITIAL_PROCESS);
-	util_assert(rawx_node != 0, "Unable to initialize first process! File %s was not found!", INITIAL_PROCESS);
+	assert(rawx_node != 0, "Unable to initialize first process! File %s was not found!", INITIAL_PROCESS);
 
 	// Here we need to load the bash process and start it.
 	// For now, let's load a fake process.
@@ -135,7 +135,7 @@ void process_execve(const s8* image_path) {
 	interrupt_disable();
 
 	Vfs_Node* rawx_node = vfs_lookup(vfs_root, image_path);
-	util_assert(rawx_node != 0, "Unable to execve! File %s was not found!", image_path);
+	assert(rawx_node != 0, "Unable to execve! File %s was not found!", image_path);
 	u8* buffer = kalloc_alloc(rawx_node->size);
 	vfs_read(rawx_node, 0, rawx_node->size, buffer);
 

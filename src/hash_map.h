@@ -68,12 +68,12 @@ static void *get_element_value(Hash_Map *hm, u32 index) {
 
 static void put_element_key(Hash_Map *hm, u32 index, const void *key) {
     void *target = get_element_key(hm, index);
-    util_memcpy(target, key, hm->key_size);
+    memcpy(target, key, hm->key_size);
 }
 
 static void put_element_value(Hash_Map *hm, u32 index, const void *value) {
     void *target = get_element_value(hm, index);
-    util_memcpy(target, value, hm->value_size);
+    memcpy(target, value, hm->value_size);
 }
 
 s32 hash_map_create(Hash_Map *hm, u32 initial_capacity, u32 key_size, u32 value_size,
@@ -85,7 +85,7 @@ s32 hash_map_create(Hash_Map *hm, u32 initial_capacity, u32 key_size, u32 value_
     hm->capacity = initial_capacity > 0 ? initial_capacity : 1;
     hm->num_elements = 0;
     hm->data = kalloc_alloc(hm->capacity * (sizeof(Hash_Map_Element_Information) + key_size + value_size));
-	util_memset(hm->data, 0, hm->capacity * (sizeof(Hash_Map_Element_Information) + key_size + value_size));
+	memset(hm->data, 0, hm->capacity * (sizeof(Hash_Map_Element_Information) + key_size + value_size));
     if (!hm->data) {
         return -1;
     }
@@ -150,7 +150,7 @@ s32 hash_map_get(Hash_Map *hm, const void *key, void *value) {
             void *possible_key = get_element_key(hm, pos);
             if (hm->key_compare_func(possible_key, key)) {
                 void *entry_value = get_element_value(hm, pos);
-                util_memcpy(value, entry_value, hm->value_size);
+                memcpy(value, entry_value, hm->value_size);
                 return 0;
             }
         } else {

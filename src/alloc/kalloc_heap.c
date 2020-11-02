@@ -23,8 +23,8 @@ typedef struct {
 
 #ifdef COMPLEX_HEAP_ENABLED
 void kalloc_heap_create(Kalloc_Heap* heap, u32 initial_addr, u32 initial_pages) {
-	util_assert(initial_addr % 0x1000 == 0, "kalloc: initial address must be aligned to 0x1000, but got 0x%u!", initial_addr);
-	util_assert(initial_pages * PAGE_SIZE >= sizeof(Kalloc_Heap_Footer) + sizeof(Kalloc_Heap_Header),
+	assert(initial_addr % 0x1000 == 0, "kalloc: initial address must be aligned to 0x1000, but got 0x%u!", initial_addr);
+	assert(initial_pages * PAGE_SIZE >= sizeof(Kalloc_Heap_Footer) + sizeof(Kalloc_Heap_Header),
 		"kalloc: insufficient number of initial pages (%u).", initial_pages);
 
 	for (u32 i = 0; i < NUM_PAGES_RESERVED_FOR_AVL + initial_pages; ++i) {
@@ -67,7 +67,7 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size, u32 alignment) {
 	if (user_space) {
 		Kalloc_Heap_Header* target_hole_header = (Kalloc_Heap_Header*)((u8*)user_space - sizeof(Kalloc_Heap_Header));
 		// We found a hole
-		util_assert(target_hole_header->used == 0,
+		assert(target_hole_header->used == 0,
 			"kalloc: found hole in inconsistent state (expected used=0, but got used=%u).", target_hole_header->used);
 		kalloc_avl_remove(&heap->avl, target_hole_header->size, user_space);
 		u32 hole_size = target_hole_header->size;
@@ -75,7 +75,7 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size, u32 alignment) {
 		void* aligned_user_space = get_aligned_address(user_space, alignment);
 		Kalloc_Heap_Header* target_aligned_hole_header = (Kalloc_Heap_Header*)((u8*)aligned_user_space - sizeof(Kalloc_Heap_Header));
 
-		util_assert((void*)aligned_user_space >= (void*)user_space, "kalloc: aligned space must be greater or equal to original space");
+		assert((void*)aligned_user_space >= (void*)user_space, "kalloc: aligned space must be greater or equal to original space");
 
 		if (aligned_user_space > user_space) {
 			// If the aligned address is greater than the hole address, we need to deal with the space
@@ -84,14 +84,14 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size, u32 alignment) {
 
 			// For now, if the heap is empty, we do not support the corner-case of allocating an aligned space that is not
 			// aligned with the initial address of the heap. (this is a problem because there is no previous block/hole to merge)
-			util_assert((u32)target_hole_header != heap->initial_addr, "kalloc: aligned-alloc is not supported when heap is empty");
+			assert((u32)target_hole_header != heap->initial_addr, "kalloc: aligned-alloc is not supported when heap is empty");
 
 			Kalloc_Heap_Footer* target_hole_footer = (Kalloc_Heap_Footer*)((u8*)target_hole_header + sizeof(Kalloc_Heap_Header) + target_hole_header->size);
 			Kalloc_Heap_Footer* previous_footer = (Kalloc_Heap_Footer*)((u8*)target_hole_header - sizeof(Kalloc_Heap_Footer));
 			Kalloc_Heap_Header* previous_header = previous_footer->header;
 
 			Kalloc_Heap_Footer* new_previous_footer = (Kalloc_Heap_Footer*)((u8*)target_aligned_hole_header - sizeof(Kalloc_Heap_Footer));
-			util_assert((void*)new_previous_footer > (void*)previous_footer,
+			assert((void*)new_previous_footer > (void*)previous_footer,
 				"kalloc: new footer address must be greater than previous footer address");
 			previous_header->size += (u8*)new_previous_footer - (u8*)previous_footer;
 			new_previous_footer->header = previous_header;
@@ -167,7 +167,7 @@ void* kalloc_heap_alloc(Kalloc_Heap* heap, u32 size, u32 alignment) {
 void kalloc_heap_free(Kalloc_Heap* heap, void* ptr) {
 	Kalloc_Heap_Header* header = (Kalloc_Heap_Header*)((u8*)ptr - sizeof(Kalloc_Heap_Header));
 	Kalloc_Heap_Footer* footer = (Kalloc_Heap_Footer*)((u8*)ptr + header->size);
-	util_assert(header->used == 1,
+	assert(header->used == 1,
 		"kalloc: found hole in inconsistent state (expected used=1, but got used=%u).", header->used);
 
 	// Check if there is a previous header

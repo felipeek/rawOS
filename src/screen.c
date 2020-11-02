@@ -65,8 +65,8 @@ static void print_at(s8 c, s32 y, s32 x) {
 }
 
 void screen_pos_cursor(u32 x, u32 y) {
-	util_assert(x < VIDEO_COLS_NUM, "error setting screen X cursor position: %u must be smaller than %u.", x, VIDEO_COLS_NUM);
-	util_assert(y < VIDEO_ROWS_NUM, "error setting screen Y cursor position: %u must be smaller than %u.", y, VIDEO_ROWS_NUM);
+	assert(x < VIDEO_COLS_NUM, "error setting screen X cursor position: %u must be smaller than %u.", x, VIDEO_COLS_NUM);
+	assert(y < VIDEO_ROWS_NUM, "error setting screen Y cursor position: %u must be smaller than %u.", y, VIDEO_ROWS_NUM);
 	screen.cursor_pos = VIDEO_COLS_NUM * y + x;
 }
 
@@ -97,7 +97,7 @@ void screen_init() {
 // Shift all the content one line up, effectively losing the first line and creating space for a new line in the bottom
 static void shift_one_line_up() {
 	s8* video_memory = (s8*)VIDEO_MEMORY_ADDRESS;
-	util_memcpy(video_memory, video_memory + VIDEO_COLS_NUM * 2, (VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM * 2);
+	memcpy(video_memory, video_memory + VIDEO_COLS_NUM * 2, (VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM * 2);
 	for (s32 i = 0; i < VIDEO_COLS_NUM; ++i) {
 		video_memory[2 * ((VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM + i)] = 0;
 		video_memory[2 * ((VIDEO_ROWS_NUM - 1) * VIDEO_COLS_NUM + i) + 1] = 0xF;

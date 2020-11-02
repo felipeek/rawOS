@@ -45,7 +45,7 @@ static s32 u32_to_str(u32 val, u8 buffer[16]) {
 
 	s32 size = start - auxbuffer;
 
-	util_memcpy(&buffer[sum], auxbuffer + 1, (u32)size);
+	memcpy(&buffer[sum], auxbuffer + 1, (u32)size);
 	return size;
 }
 
@@ -75,7 +75,7 @@ static s32 s32_to_str(s32 val, u8 buffer[16]) {
 	}
 
 	s32 size = start - auxbuffer;
-	util_memcpy(&buffer[sum], auxbuffer + 1, (u32)size);
+	memcpy(&buffer[sum], auxbuffer + 1, (u32)size);
 	return size;
 }
 

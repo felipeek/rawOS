@@ -14,17 +14,17 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
     RawX_Header* header = (RawX_Header*)at;
     at += sizeof(RawX_Header);
     if (length < at - data) {
-        util_panic("Fatal parse error: end of file within header\n");
+        panic("Fatal parse error: end of file within header\n");
     }
     length -= sizeof(RawX_Header);
 
-    util_assert(header->magic[0] == 'R' && header->magic[1] == 'A' && header->magic[2] == 'W' && header->magic[3] == 'X',
+    assert(header->magic[0] == 'R' && header->magic[1] == 'A' && header->magic[2] == 'W' && header->magic[3] == 'X',
 		"Error loading RawX: RAW magic not present");
-	util_assert(header->version == 0, "Error loading RawX: Version %u not supported", header->version);
-	util_assert(header->flags & RAWX_ARCH_X86, "Error loading RawX: x86 architecture is mandatory");
-	util_assert(length >= header->section_count * sizeof(RawX_Section),
+	assert(header->version == 0, "Error loading RawX: Version %u not supported", header->version);
+	assert(header->flags & RAWX_ARCH_X86, "Error loading RawX: x86 architecture is mandatory");
+	assert(length >= header->section_count * sizeof(RawX_Section),
 		"Error loading RawX: End of file within section table");
-	util_assert(header->load_address >= RAWX_LOAD_ADDRESS_MINIMUM,
+	assert(header->load_address >= RAWX_LOAD_ADDRESS_MINIMUM,
 		"Error loading RawX: Load address is too short. Needs to be at least 0x%x, but got 0x%x.",
 		RAWX_LOAD_ADDRESS_MINIMUM, header->load_address);
 
@@ -35,31 +35,31 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
         RawX_Section* sec = sections + i;
 		u32 section_address = header->load_address + sec->virtual_address;
 		u8* section_data = (u8*)data + sec->file_ptr_to_data;
-		util_assert(section_address % 0x1000 == 0,
+		assert(section_address % 0x1000 == 0,
 			"Error loading RawX: section address needs to be 0x1000 aligned, but got 0x%x.", section_address);
-		util_assert(section_address + sec->size_bytes < RAWX_SECTION_ADDRESS_MAXIMUM,
+		assert(section_address + sec->size_bytes < RAWX_SECTION_ADDRESS_MAXIMUM,
 			"Error loading RawX: (section address + size in bytes) is too high! Got 0x%x but can't be greater than 0x%x.",
 			section_address + sec->size_bytes, RAWX_SECTION_ADDRESS_MAXIMUM);
 
-		if (!util_strcmp(sec->name, ".code")) {
+		if (!strcmp(sec->name, ".code")) {
 			rli.code_address = section_address;
 			for (u32 i = 0; i < sec->size_bytes; i += 0x1000) {
 				u32 target_address = section_address + i;
 				u32 page_num = target_address / 0x1000;
 				u32 data_chunk_size = MIN(0x1000, sec->size_bytes - i);
 				paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
-				util_memcpy((void*)target_address, section_data, data_chunk_size);
+				memcpy((void*)target_address, section_data, data_chunk_size);
 			}
-		} else if (!util_strcmp(sec->name, ".data")) {
+		} else if (!strcmp(sec->name, ".data")) {
 			rli.data_address = section_address;
 			for (u32 i = 0; i < sec->size_bytes; i += 0x1000) {
 				u32 target_address = section_address + i;
 				u32 page_num = target_address / 0x1000;
 				u32 data_chunk_size = MIN(0x1000, sec->size_bytes - i);
 				paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
-				util_memcpy((void*)target_address, section_data, data_chunk_size);
+				memcpy((void*)target_address, section_data, data_chunk_size);
 			}
-		} else if (!util_strcmp(sec->name, ".import")) {
+		} else if (!strcmp(sec->name, ".import")) {
 			s8* start = data + sec->file_ptr_to_data;
 			at = start;
 			RawX_Import_Table* itable = (RawX_Import_Table*)at;
@@ -82,14 +82,14 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				s8* lib_name = start + imp->section_lib_offset;
 				u32* call_address = &imp->call_address;
 				printf("rawx: found symbol %s:%s\n", symbol_name, lib_name);
-				util_assert(!util_strcmp(lib_name, RAWX_KERNEL_LIB_NAME), "Error loading RawX: import has unknown lib (%s).", lib_name);
+				assert(!strcmp(lib_name, RAWX_KERNEL_LIB_NAME), "Error loading RawX: import has unknown lib (%s).", lib_name);
 
 				Syscall_Stub_Information ssi;
-				util_assert(!syscall_stub_get(symbol_name, &ssi), "Error loading RawX: import has unknown symbol (%s).", symbol_name);
+				assert(!syscall_stub_get(symbol_name, &ssi), "Error loading RawX: import has unknown symbol (%s).", symbol_name);
 
-				util_assert(current_addr + ssi.syscall_stub_size < page_addr + 0x1000,
+				assert(current_addr + ssi.syscall_stub_size < page_addr + 0x1000,
 					"Error loading RawX: more than one page needed for imports! go fix it!");
-				util_memcpy((void*)current_addr, (void*)ssi.syscall_stub_address, ssi.syscall_stub_size);
+				memcpy((void*)current_addr, (void*)ssi.syscall_stub_address, ssi.syscall_stub_size);
 				// set the call address!
 				*call_address = current_addr;
 				current_addr += ssi.syscall_stub_size;
@@ -102,17 +102,17 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				u32 page_num = target_address / 0x1000;
 				u32 data_chunk_size = MIN(0x1000, sec->size_bytes - i);
 				paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
-				util_memcpy((void*)target_address, section_data, data_chunk_size);
+				memcpy((void*)target_address, section_data, data_chunk_size);
 			}
 		}
     }
 
 	if (create_stack) {
-		util_assert(header->stack_size > 0, "Error loading RawX: stack size must be greater than 0 (got 0x%x)", header->stack_size);
-		util_assert(header->stack_size % 0x1000 == 0, "Error loading RawX: stack size must be 0x1000 aligned (got 0x%x)", header->stack_size);
+		assert(header->stack_size > 0, "Error loading RawX: stack size must be greater than 0 (got 0x%x)", header->stack_size);
+		assert(header->stack_size % 0x1000 == 0, "Error loading RawX: stack size must be 0x1000 aligned (got 0x%x)", header->stack_size);
 
 		u32 stack_pages = header->stack_size / 0x1000;
-		util_assert(stack_pages <= RAWX_STACK_ADDRESS_MAX_RESERVED_PAGES,
+		assert(stack_pages <= RAWX_STACK_ADDRESS_MAX_RESERVED_PAGES,
 			"Error loading RawX: stack is too big! Got %u needed pages, but max is %u!", stack_pages, RAWX_STACK_ADDRESS_MAX_RESERVED_PAGES);
 		for (u32 i = 0; i < stack_pages; ++i) {
 			u32 page_num = (RAWX_STACK_ADDRESS / 0x1000) - i;

@@ -29,7 +29,7 @@ void* kalloc_realloc(void* ptr, u32 old_size, u32 new_size) {
 		return ptr;
 	}
 	void* mem = kalloc_heap_alloc(&heap, new_size, 0x0);
-	util_memcpy(mem, ptr, old_size);
+	memcpy(mem, ptr, old_size);
 	kalloc_free(ptr);
 	return mem;
 }
