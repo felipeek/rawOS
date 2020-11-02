@@ -3,8 +3,9 @@
 #include "util/printf.h"
 #include "paging.h"
 #include "syscall.h"
+#include "process.h"
 
-RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack) {
+RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack, s32 create_kernel_stack) {
     s8* at = data;
     RawX_Header* header = (RawX_Header*)at;
     at += sizeof(RawX_Header);
@@ -82,7 +83,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				// set the call address!
 				*call_address = current_addr;
 				current_addr += ssi.syscall_stub_size;
-				printf("rawx: call address set for syscall %s.\n", symbol_name);
+				printf("rawx: call address 0x%x set for syscall %s.\n", *call_address, symbol_name);
 			}
 
 			// finish by copying the section, since all call addresses are set now.
@@ -106,11 +107,15 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 			u32 page_num = (RAWX_STACK_ADDRESS / 0x1000) - i;
 			paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
 		}
+
+		rli.stack_address = RAWX_STACK_ADDRESS;
 	}
 
-	for (u32 i = 0; i < RAWX_KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE; ++i) {
-		u32 page_num = (RAWX_KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE / 0x1000) - i;
-		paging_create_process_page_with_any_frame(process_page_directory, page_num, 0);
+	if (create_kernel_stack) {
+		for (u32 i = 0; i < KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE; ++i) {
+			u32 page_num = (KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE / 0x1000) - i;
+			paging_create_process_page_with_any_frame(process_page_directory, page_num, 0);
+		}
 	}
 
 	rli.entrypoint = header->load_address + header->entry_point_offset;

@@ -50,5 +50,6 @@ Page_Directory* paging_clone_page_directory_for_new_process(const Page_Directory
 u32 paging_get_page_directory_x86_tables_frame_address(const Page_Directory* page_directory);
 u32 paging_get_page_frame_address(const Page_Directory* page_directory, u32 page_num);
 Page_Directory* paging_get_kernel_page_directory();
+void paging_clean_all_non_kernel_pages_from_page_directory(Page_Directory* page_directory);
 
 #endif

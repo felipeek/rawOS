@@ -9,8 +9,6 @@
 #define RAWX_STACK_ADDRESS 0xC0000000
 #define RAWX_STACK_ADDRESS_MAX_RESERVED_PAGES 2048
 #define RAWX_IMPORT_DATA_MAX_RESERVED_PAGES 2048
-#define RAWX_KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE 0xF0000000
-#define RAWX_KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE 2048
 
 typedef struct {
     u8  magic[4];        // RAWX
@@ -60,5 +58,5 @@ typedef struct {
 	u32 entrypoint;
 } RawX_Load_Information;
 
-RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack);
+RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack, s32 create_kernel_stack);
 #endif

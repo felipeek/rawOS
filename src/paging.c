@@ -144,6 +144,44 @@ u32 paging_get_page_frame_address(const Page_Directory* page_directory, u32 page
 	return get_physical_address_of_virtual_address(page_directory, page_num * 0x1000);
 }
 
+static s32 is_page_part_of_kernel_stack_in_process_address_space(u32 page_num) {
+	u32 kernel_stack_in_process_address_space_last_page_num = KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE / 0x1000;
+	u32 kernel_stack_in_process_address_space_first_page_num = kernel_stack_in_process_address_space_last_page_num -
+		KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE;
+	return (page_num >= kernel_stack_in_process_address_space_first_page_num
+		&& page_num <= kernel_stack_in_process_address_space_last_page_num);
+}
+
+void paging_clean_all_non_kernel_pages_from_page_directory(Page_Directory* page_directory) {
+	for (u32 i = 1024 / 4; i < 1024; ++i) {
+		Page_Table* current_table = page_directory->tables[i];
+		// If the page table exists
+		if (current_table) {
+			s32 should_table_be_destroyed = 1;
+			for (u32 j = 0; j < 1024; ++j) {
+				Page_Entry* page_entry = &current_table->pages[j];
+				u32 page_num = i * 1024 + j;
+				if (page_entry->present) {
+					util_assert("page is present, but no frame is allocd?", bitmap_get(&paging.available_frames, page_entry->frame_address_20_bits));
+					if (!is_page_part_of_kernel_stack_in_process_address_space(page_num)) {
+						bitmap_clear(&paging.available_frames, page_entry->frame_address_20_bits);
+						util_memset(page_entry, 0, sizeof(Page_Entry));
+					} else {
+						// We can't destroy this table because there is at least one page that was not destroyed.
+						should_table_be_destroyed = 0;
+					}
+				}
+			}
+
+			if (should_table_be_destroyed) {
+				kalloc_free(current_table);
+				page_directory->tables[i] = 0;
+				page_directory->tables_x86_representation[i] = 0;
+			}
+		}
+	}
+}
+
 // Clone the page_directory of an existing process.
 // The kernel is always linked to the first 1GB of the address space.
 // The process data, which is part of 1GB-4GB address space range, is copied, not linked.

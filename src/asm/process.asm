@@ -2,6 +2,7 @@ global process_switch_context
 global process_switch_context_magic_return_value
 global process_switch_to_user_mode
 global process_switch_to_user_mode_set_stack_and_jmp_addr
+global process_flush_tlb
 
 ; Set the context for the new process.
 ; the new EIP, ESP and EBP are received as parameters and are set accordingly.
@@ -100,3 +101,8 @@ process_switch_to_user_mode_set_stack_and_jmp_addr:
 	push 0x1b							; 0x1b is the offset of our user-mode code gdt entry, with last two bits set to 1, to indicate RPL 3.
 	push ecx							; push the address in which we wanna return after iret, which is received as a parameter
 	iret
+
+process_flush_tlb:
+	mov eax, cr3
+	mov cr3, eax
+	ret

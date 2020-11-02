@@ -10,7 +10,7 @@
 #include "rawx.h"
 #include "fs/vfs.h"
 
-#define INITIAL_PROCESS "rawos_print.rawx"
+#define INITIAL_PROCESS "rawos_execve.rawx"
 
 typedef struct Process {
 	u32 pid;
@@ -66,7 +66,7 @@ void process_init() {
 
 	// @NOTE: for this first process, we dont need to create the stack. We simply use the pages of the old kernel stack,
 	// which were copied to the new address space
-	RawX_Load_Information rli = rawx_load(buffer, rawx_node->size, active_process->page_directory, 0);
+	RawX_Load_Information rli = rawx_load(buffer, rawx_node->size, active_process->page_directory, 0, 1);
 	u32 stack_addr = KERNEL_STACK_ADDRESS;
 
 	active_process->ebp = stack_addr;
@@ -106,8 +106,8 @@ s32 process_fork() {
 		// Create kernel stack for process
 		// We copy the current kernel stack to the new kernel stack.
 		// This is needed because when the new process is invoked, we wanna have the exact same kernel stack that we have right now.
-		for (u32 i = 0; i < RAWX_KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE; ++i) {
-			u32 page_num = (RAWX_KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE / 0x1000) - i;
+		for (u32 i = 0; i < KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE; ++i) {
+			u32 page_num = (KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE / 0x1000) - i;
 			u32 frame_dst_addr = paging_get_page_frame_address(new_process->page_directory, page_num);
 			u32 frame_src_addr = paging_get_page_frame_address(active_process->page_directory, page_num);
 			paging_copy_frame(frame_dst_addr, frame_src_addr);
@@ -128,6 +128,32 @@ s32 process_fork() {
 		// We are the child, so we return 0 to indicate to the caller that he is in the child context.
 		return 0;
 	}
+}
+
+void process_execve(const s8* image_path) {
+	// We start by disabling interrupts
+	interrupt_disable();
+
+	Vfs_Node* rawx_node = vfs_lookup(vfs_root, image_path);
+	util_assert("execve: Unable to find rawx of root process", rawx_node != 0);
+	u8* buffer = kalloc_alloc(rawx_node->size);
+	vfs_read(rawx_node, 0, rawx_node->size, buffer);
+
+	paging_clean_all_non_kernel_pages_from_page_directory(active_process->page_directory);
+
+	RawX_Load_Information rli = rawx_load(buffer, rawx_node->size, active_process->page_directory, 1, 0);
+
+	active_process->ebp = rli.stack_address;
+	active_process->esp = rli.stack_address;
+	active_process->eip = rli.entrypoint;
+
+	// Since we modified the page tables, we need to flush the goddamn tlb
+	process_flush_tlb();
+
+	// NOTE: interrupts will be re-enabled automatically by this function once we jump to user-mode.
+	// Here, we basically force the switch to user-mode and we tell the processor to use the
+	// stack defined by active_process->esp and to jump to the address defined by active_process->eip.
+	process_switch_to_user_mode_set_stack_and_jmp_addr(active_process->esp, active_process->eip);
 }
 
 void process_switch() {

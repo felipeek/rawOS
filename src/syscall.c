@@ -12,6 +12,7 @@ static const s8 PRINT_SYSCALL_NAME[] = "print";
 static const s8 FORK_SYSCALL_NAME[] = "fork";
 static const s8 POS_CURSOR_SYSCALL_NAME[] = "pos_cursor";
 static const s8 CLEAR_SCREEN_SYSCALL_NAME[] = "clear_screen";
+static const s8 EXECVE_SYSCALL_NAME[] = "execve";
 
 // Compares two keys. Needs to return 1 if the keys are equal, 0 otherwise.
 static s32 syscall_stub_name_compare(const void* _key1, const void* _key2) {
@@ -49,6 +50,10 @@ static void syscall_handler(Interrupt_Handler_Args* args) {
 			// clear_screen syscall
 			screen_clear();
 		} break;
+		case 4: {
+			// exceve syscall
+			process_execve((s8*)args->ebx);
+		} break;
 	}
 }
 
@@ -76,6 +81,10 @@ void syscall_init() {
 	ssi.syscall_stub_address = (u32)syscall_clear_screen_stub;
 	ssi.syscall_stub_size = syscall_clear_screen_stub_size;
 	syscall_name = CLEAR_SCREEN_SYSCALL_NAME;
+	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
+	ssi.syscall_stub_address = (u32)syscall_execve_stub;
+	ssi.syscall_stub_size = syscall_execve_stub_size;
+	syscall_name = EXECVE_SYSCALL_NAME;
 	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
 	interrupt_register_handler(syscall_handler, ISR128);
 }
