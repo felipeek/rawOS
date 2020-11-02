@@ -5,7 +5,6 @@
 #include "asm/util.h"
 #include "util/printf.h"
 #include "asm/process.h"
-#include "gdt.h"
 #include "asm/paging.h"
 #include "util/util.h"
 #include "rawx.h"
@@ -64,13 +63,11 @@ void process_init() {
 	// @NOTE: for this first process, we dont need to create the stack. We simply use the pages of the old kernel stack,
 	// which were copied to the new address space
 	RawX_Load_Information rli = rawx_load(buffer, rawx_node->size, current_process->page_directory, 0);
-	u32 stack_addr = 0xC0000000;
+	u32 stack_addr = KERNEL_STACK_ADDRESS;
 
 	current_process->ebp = stack_addr;
 	current_process->esp = stack_addr;
 	current_process->eip = rli.entrypoint;
-
-	gdt_set_kernel_stack(RAWX_KERNEL_STACK_ADDRESS);
 
 	// NOTE: interrupts will be re-enabled automatically by this function once we jump to user-mode.
 	// Here, we basically force the switch to user-mode and we tell the processor to use the
@@ -105,8 +102,8 @@ s32 process_fork() {
 		// Create kernel stack for process
 		// We copy the current kernel stack to the new kernel stack.
 		// This is needed because when the new process is invoked, we wanna have the exact same kernel stack that we have right now.
-		for (u32 i = 0; i < RAWX_KERNEL_STACK_RESERVED_PAGES; ++i) {
-			u32 page_num = (RAWX_KERNEL_STACK_ADDRESS / 0x1000) - i;
+		for (u32 i = 0; i < RAWX_KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE; ++i) {
+			u32 page_num = (RAWX_KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE / 0x1000) - i;
 			u32 frame_dst_addr = paging_get_page_frame_address(new_process->page_directory, page_num);
 			u32 frame_src_addr = paging_get_page_frame_address(current_process->page_directory, page_num);
 			paging_copy_frame(frame_dst_addr, frame_src_addr);

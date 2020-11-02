@@ -1,6 +1,7 @@
 #include "gdt.h"
 #include "util/util.h"
 #include "asm/gdt.h"
+#include "rawx.h"
 
 #define GDT_NUM_ENTRIES 6
 
@@ -207,7 +208,7 @@ void gdt_init() {
 
 	// @TODO: make defines for 0x10 (data seg), 0x08 (code seg), and 0x3 (RPL 3)
 	tss_entry.ss0 = 0x10;
-	tss_entry.esp0 = 0x0;
+	tss_entry.esp0 = RAWX_KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE;
 	// Here we set the cs, ss, ds, es, fs and gs entries in the TSS. These specify what
    	// segments should be loaded when the processor switches to kernel mode. Therefore
    	// they are just our normal kernel code/data segments - 0x08 and 0x10 respectively,
@@ -227,7 +228,3 @@ void gdt_init() {
 	gdt_flush((u32)&gdt_descriptor);
 	gdt_tss_flush();
 }
-
-void gdt_set_kernel_stack(u32 stack) {
-   tss_entry.esp0 = stack;
-} 

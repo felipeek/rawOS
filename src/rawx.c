@@ -36,7 +36,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				u32 target_address = section_address + i;
 				u32 page_num = target_address / 0x1000;
 				u32 data_chunk_size = MIN(0x1000, sec->size_bytes - i);
-				paging_create_page_with_any_frame(process_page_directory, page_num, 1);
+				paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
 				util_memcpy((void*)target_address, section_data, data_chunk_size);
 			}
 		} else if (!util_strcmp(sec->name, ".data")) {
@@ -45,7 +45,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				u32 target_address = section_address + i;
 				u32 page_num = target_address / 0x1000;
 				u32 data_chunk_size = MIN(0x1000, sec->size_bytes - i);
-				paging_create_page_with_any_frame(process_page_directory, page_num, 1);
+				paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
 				util_memcpy((void*)target_address, section_data, data_chunk_size);
 			}
 		} else if (!util_strcmp(sec->name, ".import")) {
@@ -62,7 +62,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				- RAWX_IMPORT_DATA_MAX_RESERVED_PAGES * 0x1000;
 			// @TODO: For now, let's alloc a single page for imports, for simplicity.
 			// In the future, we can alloc the next pages, starting at page_addr
-			paging_create_page_with_any_frame(process_page_directory, page_addr / 0x1000, 1);
+			paging_create_process_page_with_any_frame(process_page_directory, page_addr / 0x1000, 1);
 
 			u32 current_addr = page_addr;
 			for (s32 i = 0; i < symbol_count; ++i) {
@@ -90,7 +90,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				u32 target_address = section_address + i;
 				u32 page_num = target_address / 0x1000;
 				u32 data_chunk_size = MIN(0x1000, sec->size_bytes - i);
-				paging_create_page_with_any_frame(process_page_directory, page_num, 1);
+				paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
 				util_memcpy((void*)target_address, section_data, data_chunk_size);
 			}
 		}
@@ -104,13 +104,13 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 		util_assert("rawx loader error: stack too big", stack_pages <= RAWX_STACK_ADDRESS_MAX_RESERVED_PAGES);
 		for (u32 i = 0; i < stack_pages; ++i) {
 			u32 page_num = (RAWX_STACK_ADDRESS / 0x1000) - i;
-			paging_create_page_with_any_frame(process_page_directory, page_num, 1);
+			paging_create_process_page_with_any_frame(process_page_directory, page_num, 1);
 		}
 	}
 
-	for (u32 i = 0; i < RAWX_KERNEL_STACK_RESERVED_PAGES; ++i) {
-		u32 page_num = (RAWX_KERNEL_STACK_ADDRESS / 0x1000) - i;
-		paging_create_page_with_any_frame(process_page_directory, page_num, 0);
+	for (u32 i = 0; i < RAWX_KERNEL_STACK_RESERVED_PAGES_IN_PROCESS_ADDRESS_SPACE; ++i) {
+		u32 page_num = (RAWX_KERNEL_STACK_ADDRESS_IN_PROCESS_ADDRESS_SPACE / 0x1000) - i;
+		paging_create_process_page_with_any_frame(process_page_directory, page_num, 0);
 	}
 
 	rli.entrypoint = header->load_address + header->entry_point_offset;

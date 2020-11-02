@@ -2,6 +2,17 @@
 #define RAW_OS_PAGING_H
 #include "common.h"
 
+#define KERNEL_STACK_RESERVED_PAGES 2048
+// We can only use 3GB of PHYSICAL_RAM_SIZE because of the 3GB barrier imposed by the hardware
+// https://en.wikipedia.org/wiki/3_GB_barrier
+#define PHYSICAL_RAM_SIZE 0xC0000000
+// The address in which the kernel stack is stored.
+// @NOTE: If this value is changed, we need to change in kernel_entry.asm aswell.
+// @TODO: Make both places consume the same constant
+#define KERNEL_STACK_ADDRESS 0xC0000000
+#define AVAILABLE_FRAMES_NUM (PHYSICAL_RAM_SIZE / 0x1000)
+#define KERNEL_PAGE_TABLES_ADDRESS 0x00100000
+
 // The page entry, as defined by Intel in the x86 architecture
 typedef struct {
 	u32 present : 1;            // If set, page is present in RAM
@@ -33,8 +44,8 @@ typedef struct {
 } Page_Directory;
 
 void paging_init();
+u32 paging_create_process_page_with_any_frame(Page_Directory* page_directory, u32 page_num, u32 user_mode);
 u32 paging_create_kernel_page_with_any_frame(u32 page_num);
-u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_num, u32 user_mode);
 Page_Directory* paging_clone_page_directory_for_new_process(const Page_Directory* page_directory);
 u32 paging_get_page_directory_x86_tables_frame_address(const Page_Directory* page_directory);
 u32 paging_get_page_frame_address(const Page_Directory* page_directory, u32 page_num);

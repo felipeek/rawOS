@@ -6,17 +6,6 @@
 #include "util/printf.h"
 #include "alloc/kalloc.h"
 
-#define KERNEL_STACK_RESERVED_PAGES 2048
-// We can only use 3GB of PHYSICAL_RAM_SIZE because of the 3GB barrier imposed by the hardware
-// https://en.wikipedia.org/wiki/3_GB_barrier
-#define PHYSICAL_RAM_SIZE 0xC0000000
-// The address in which the kernel stack is stored.
-// @NOTE: If this value is changed, we need to change in kernel_entry.asm aswell.
-// @TODO: Make both places consume the same constant
-#define KERNEL_STACK_ADDRESS 0xC0000000
-#define AVAILABLE_FRAMES_NUM (PHYSICAL_RAM_SIZE / 0x1000)
-#define KERNEL_PAGE_TABLES_ADDRESS 0x00100000
-
 // Each x86 page has 4KB (default)
 // Each page table also has 4KB. Each page table entry occupies 4 bytes (32 bits). Therefore, a single page table can
 // store pointers to 1024 pages (4096 / 4 bytes), which translates to 4MB in total.
@@ -231,25 +220,20 @@ static s32 page_exist(const Page_Directory* page_directory, u32 page_num) {
 	return 0;
 }
 
-// This function creates a virtual page and allocates a frame to it.
+// This function creates a virtual page for a process and allocates a frame to it.
 // Can only be called if the given virtual page is not being used.
 // Returns allocd frame
-u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_num, u32 user_mode) {
-	//printf("allocating page num %u\n", page_num);
+u32 paging_create_process_page_with_any_frame(Page_Directory* page_directory, u32 page_num, u32 user_mode) {
 	u32 page_table_index = page_num / 1024;
 	u32 page_num_within_table = page_num % 1024;
 
 	if (!page_directory->tables[page_table_index]) {
-		u32 virtual_page_address = KERNEL_PAGE_TABLES_ADDRESS + page_table_index * 0x1000;
-		u32 virtual_page_num = virtual_page_address / 0x1000;
+		u32 page_table_virtual_address = (u32)kalloc_alloc_aligned(sizeof(Page_Table), 0x1000);
+		util_memset((void*)page_table_virtual_address, 0, sizeof(Page_Table));
+		u32 page_table_frame_address = paging_get_page_frame_address(paging.kernel_page_directory, page_table_virtual_address / 0x1000);
 
-		page_directory->tables[page_table_index] = (Page_Table*)virtual_page_address;
-		// The new page table also needs a frame. Calls this function recursively to get the frame.
-		// @NOTE: The key here is that we know for sure that the page table used to store 'virtual_page_num' will ALWAYS exist.
-		// This is because we always pre-allocate all page tables that may be used to store other page tables.
-		// For this reason, we don't need to worry about the same page-table being referenced multiple times during recursion.
-		u32 allocd_frame = paging_create_page_with_any_frame(page_directory, virtual_page_num, 0);
-		page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
+		page_directory->tables[page_table_index] = (Page_Table*)page_table_virtual_address;
+		page_directory->tables_x86_representation[page_table_index] = (u32)(page_table_frame_address) | 0x7; // PRESENT, RW, US
 		util_memset(page_directory->tables[page_table_index], 0, sizeof(Page_Table));
 
 		printf("Allocating new table %u\n", page_table_index);
@@ -277,8 +261,50 @@ u32 paging_create_page_with_any_frame(Page_Directory* page_directory, u32 page_n
 	return allocd_frame;
 }
 
+// This function creates a virtual page for the kernel and allocates a frame to it.
+// Can only be called if the given virtual page is not being used.
+// Returns allocd frame
 u32 paging_create_kernel_page_with_any_frame(u32 page_num) {
-	return paging_create_page_with_any_frame(paging.kernel_page_directory, page_num, 0);
+	Page_Directory* page_directory = paging.kernel_page_directory;
+	u32 page_table_index = page_num / 1024;
+	u32 page_num_within_table = page_num % 1024;
+
+	if (!page_directory->tables[page_table_index]) {
+		u32 virtual_page_address = KERNEL_PAGE_TABLES_ADDRESS + page_table_index * 0x1000;
+		u32 virtual_page_num = virtual_page_address / 0x1000;
+
+		page_directory->tables[page_table_index] = (Page_Table*)virtual_page_address;
+		// The new page table also needs a frame. Calls this function recursively to get the frame.
+		// @NOTE: The key here is that we know for sure that the page table used to store 'virtual_page_num' will ALWAYS exist.
+		// This is because we always pre-allocate all page tables that may be used to store other page tables.
+		// For this reason, we don't need to worry about the same page-table being referenced multiple times during recursion.
+		u32 allocd_frame = paging_create_kernel_page_with_any_frame(virtual_page_num);
+		page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
+		util_memset(page_directory->tables[page_table_index], 0, sizeof(Page_Table));
+
+		printf("Allocating new table %u\n", page_table_index);
+	}
+
+	Page_Entry* page_entry = &page_directory->tables[page_table_index]->pages[page_num_within_table];
+	util_assert("Trying to create page that already exists!", !page_entry->present);
+
+	u32 allocd_frame = bitmap_get_first_clear(&paging.available_frames);
+	bitmap_set(&paging.available_frames, allocd_frame);
+	page_entry->present = 1;
+	page_entry->user_mode = 0;
+	page_entry->writable = 1;   // for now all pages are writable
+	page_entry->frame_address_20_bits = allocd_frame;
+
+	// Double-check whether this frame is addressable!
+	// If we pick a physical page that is not addressable (because, for example, it is reserved for MMIO),
+	// then we will not be able to write to this page
+	// ... and it will be extremely hard to debug what is going on :)
+	u8* test = (u8*)(page_num * 0x1000);
+	*test = 0xAB;
+	//printf("Page: %x\n", allocd_frame * 0x1000);
+	util_assert("A non-addressable frame was chosen!", *test == 0xAB);
+
+	return allocd_frame;
 }
 
 // Gets a page from a page directory. The page must already exist.
