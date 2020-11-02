@@ -5,6 +5,7 @@
 #include "util/bitmap.h"
 #include "util/printf.h"
 #include "alloc/kalloc.h"
+#include "process.h"
 
 // Each x86 page has 4KB (default)
 // Each page table also has 4KB. Each page table entry occupies 4 bytes (32 bits). Therefore, a single page table can
@@ -279,8 +280,10 @@ u32 paging_create_kernel_page_with_any_frame(u32 page_num) {
 		// This is because we always pre-allocate all page tables that may be used to store other page tables.
 		// For this reason, we don't need to worry about the same page-table being referenced multiple times during recursion.
 		u32 allocd_frame = paging_create_kernel_page_with_any_frame(virtual_page_num);
-		page_directory->tables_x86_representation[page_table_index] = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
+		u32 page_table_x86_representation = (u32)(allocd_frame * 0x1000) | 0x7; // PRESENT, RW, US
+		page_directory->tables_x86_representation[page_table_index] = page_table_x86_representation;
 		util_memset(page_directory->tables[page_table_index], 0, sizeof(Page_Table));
+		process_link_kernel_table_to_all_address_spaces(virtual_page_address, page_table_index, page_table_x86_representation);
 
 		printf("Allocating new table %u\n", page_table_index);
 	}
