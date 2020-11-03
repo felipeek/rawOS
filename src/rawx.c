@@ -9,8 +9,8 @@
 #define RAWX_SECTION_ADDRESS_MAXIMUM (RAWX_STACK_ADDRESS - RAWX_STACK_ADDRESS_MAX_RESERVED_PAGES * 0x1000 - RAWX_IMPORT_DATA_MAX_RESERVED_PAGES * 0x1000)
 #define RAWX_KERNEL_LIB_NAME "kernel"
 
-RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack, s32 create_kernel_stack) {
-    s8* at = data;
+RawX_Load_Information rawx_load(u8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack, s32 create_kernel_stack) {
+    u8* at = data;
     RawX_Header* header = (RawX_Header*)at;
     at += sizeof(RawX_Header);
     if (length < at - data) {
@@ -31,7 +31,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 	RawX_Load_Information rli;
 
 	RawX_Section* sections = (RawX_Section*)at;
-    for (s32 i = 0; i < header->section_count; ++i) {
+    for (u32 i = 0; i < header->section_count; ++i) {
         RawX_Section* sec = sections + i;
 		u32 section_address = header->load_address + sec->virtual_address;
 		u8* section_data = (u8*)data + sec->file_ptr_to_data;
@@ -60,7 +60,7 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 				memcpy((void*)target_address, section_data, data_chunk_size);
 			}
 		} else if (!strcmp(sec->name, ".import")) {
-			s8* start = data + sec->file_ptr_to_data;
+			u8* start = data + sec->file_ptr_to_data;
 			at = start;
 			RawX_Import_Table* itable = (RawX_Import_Table*)at;
 			s32 symbol_count = itable->symbol_count;
@@ -78,8 +78,8 @@ RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_pa
 			u32 current_addr = page_addr;
 			for (s32 i = 0; i < symbol_count; ++i) {
 				RawX_Import_Address* imp = iaddr + i;
-				s8* symbol_name = start + imp->section_symbol_offset;
-				s8* lib_name = start + imp->section_lib_offset;
+				s8* symbol_name = (s8*)start + imp->section_symbol_offset;
+				s8* lib_name = (s8*)start + imp->section_lib_offset;
 				u32* call_address = &imp->call_address;
 				printf("rawx: found symbol %s:%s\n", symbol_name, lib_name);
 				assert(!strcmp(lib_name, RAWX_KERNEL_LIB_NAME), "Error loading RawX: import has unknown lib (%s).", lib_name);

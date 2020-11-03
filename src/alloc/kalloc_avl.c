@@ -103,7 +103,6 @@ static void update_node_height(Kalloc_AVL_Node* node) {
 
 static Kalloc_AVL_Node* rotate_right(Kalloc_AVL_Node* root) {
 	Kalloc_AVL_Node* pivot = root->left;
-	Kalloc_AVL_Node* child = pivot->left;
 
 	root->left = pivot->right;
 	pivot->right = root;
@@ -116,7 +115,6 @@ static Kalloc_AVL_Node* rotate_right(Kalloc_AVL_Node* root) {
 
 static Kalloc_AVL_Node* rotate_left(Kalloc_AVL_Node* root) {
 	Kalloc_AVL_Node* pivot = root->right;
-	Kalloc_AVL_Node* child = pivot->right;
 
 	root->right = pivot->left;
 	pivot->left = root;

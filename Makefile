@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -ffreestanding -m32 -fno-pie -Wall
+CFLAGS = -ffreestanding -m32 -fno-pie
 BIN = rawOS
 BUILD_DIR = ./bin
 RES_DIR = ./res

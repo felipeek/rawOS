@@ -366,11 +366,11 @@ static void page_fault_handler(Interrupt_Handler_Args* args) {
 	u32 faulting_addr = paging_get_faulting_address();
 
 	// The error code gives us details of what happened.
-	s32 present = !(args->err_code & 0x1);   // Page not present
-	s32 rw = args->err_code & 0x2;           // Write operation?
-	s32 us = args->err_code & 0x4;           // Processor was in user-mode?
-	s32 reserved = args->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
-	s32 id = args->err_code & 0x10;          // Caused by an instruction fetch?
+	u32 present = !(args->err_code & 0x1);   // Page not present
+	u32 rw = args->err_code & 0x2;           // Write operation?
+	u32 us = args->err_code & 0x4;           // Processor was in user-mode?
+	u32 reserved = args->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+	u32 id = args->err_code & 0x10;          // Caused by an instruction fetch?
 
 	// Output an error message.
 	printf("Page fault! ( ");

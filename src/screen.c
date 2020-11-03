@@ -20,13 +20,11 @@ void screen_print_char(s8 c) {
 }
 
 static void screen_print_nibble(u8 nibble) {
-	u8 data[2];
-	data[0] = nibble + '0';
+	s8 data = (s8)nibble + '0';
 	if (nibble > 9) {
-		data[0] += 7;
+		data += 7;
 	}
-	data[1] = 0;
-	screen_print(data);
+	screen_print_with_len(&data, 1);
 }
 
 void screen_print_byte(u8 byte) {

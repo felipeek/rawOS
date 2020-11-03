@@ -78,6 +78,7 @@ u32 bitmap_get_first_clear(const Bitmap* bitmap) {
 	}
 
 	panic("Bitmap full!");
+	return 0;
 }
 
 u32 bitmap_get(const Bitmap* bitmap, u32 index) {

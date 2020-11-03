@@ -17,11 +17,11 @@ typedef struct {
     u32 load_address;
     u32 entry_point_offset;
     u32 stack_size;
-    s32 section_count;
+    u32 section_count;
 } RawX_Header;
 
 typedef struct {
-    u8  name[8];            // .code .data .import
+    s8  name[8];            // .code .data .import
     u32 size_bytes;
     u32 virtual_address;    // offset from load_address, must be aligned to 0x1000
     u32 file_ptr_to_data;   // offset within the file to the section data
@@ -58,5 +58,5 @@ typedef struct {
 	u32 entrypoint;
 } RawX_Load_Information;
 
-RawX_Load_Information rawx_load(s8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack, s32 create_kernel_stack);
+RawX_Load_Information rawx_load(u8* data, s32 length, Page_Directory* process_page_directory, s32 create_stack, s32 create_kernel_stack);
 #endif

@@ -2,14 +2,10 @@
 #include "../screen.h"
 #include "util.h"
 
-static s32 u32_to_str_base16(u32 value, s32 bitsize, s32 leading_zeros, s32 capitalized, u8 buffer[16])
+static s32 u32_to_str_base16(u32 value, s32 bitsize, s32 leading_zeros, s8 buffer[16])
 {
 	s32 i = 0;
 	u32 mask = 0xf0000000 >> (32 - bitsize);
-	u8 cap = 0x57;
-	if (capitalized) {
-		cap = 0x37; // hex letters capitalized
-	}
 
 	for (; i < (bitsize / 4); i += 1) {
 		u32 f = (value & mask) >> (bitsize - 4);
@@ -24,8 +20,8 @@ static s32 u32_to_str_base16(u32 value, s32 bitsize, s32 leading_zeros, s32 capi
 	return i;
 }
 
-static s32 u32_to_str(u32 val, u8 buffer[16]) {
-	u8 b[16] = {0};
+static s32 u32_to_str(u32 val, s8 buffer[16]) {
+	s8 b[16] = {0};
 	s32 sum = 0;
 
 	if (val == 0) {
@@ -39,7 +35,7 @@ static s32 u32_to_str(u32 val, u8 buffer[16]) {
 	while (val != 0) {
 		u32 rem = val % 10;
 		val /= 10;
-		*auxbuffer = '0' + (u8)rem;
+		*auxbuffer = '0' + (s8)rem;
 		auxbuffer -= 1;
 	}
 
@@ -49,8 +45,8 @@ static s32 u32_to_str(u32 val, u8 buffer[16]) {
 	return size;
 }
 
-static s32 s32_to_str(s32 val, u8 buffer[16]) {
-	u8 b[16] = {0};
+static s32 s32_to_str(s32 val, s8 buffer[16]) {
+	s8 b[16] = {0};
 	s32 sum = 0;
 
 	if (val == 0) {
@@ -70,7 +66,7 @@ static s32 s32_to_str(s32 val, u8 buffer[16]) {
 	while (val != 0) {
 		s32 rem = val % 10;
 		val /= 10;
-		*auxbuffer = '0' + (u8)rem;
+		*auxbuffer = '0' + (s8)rem;
 		--auxbuffer;
 	}
 
@@ -86,20 +82,20 @@ static void print_string(const s8 *str) {
 }
 
 static void print_decimal_unsigned(u32 value) {
-	u8 mem[16] = {0};
-	s32 length = u32_to_str(value, mem);
+	s8 mem[16] = {0};
+	u32_to_str(value, mem);
 	screen_print(mem);
 }
 
 static void print_decimal_signed(s32 value) {
-	u8 mem[16] = {0};
-	s32 length = s32_to_str(value, mem);
+	s8 mem[16] = {0};
+	s32_to_str(value, mem);
 	screen_print(mem);
 }
 
 static void print_hexadecimal(u32 value) {
 	s8 mem[16] = {0};
-	s32 length = u32_to_str_base16(value, 32, 1, 0, mem);
+	u32_to_str_base16(value, 32, 1, mem);
 	screen_print(mem);
 }
 

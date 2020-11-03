@@ -23,6 +23,7 @@ static s32 initrd_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf) {
 	u32 size_to_read = MIN(size, vfs_node->size - offset);
 	u8* file_data = initrd_files_data[vfs_node->inode - 1];
 	memcpy(buf, file_data + offset, size_to_read);
+	return size_to_read;
 }
 
 static s32 initrd_readdir(Vfs_Node* vfs_node, u32 index, Vfs_Dirent* dirent) {
