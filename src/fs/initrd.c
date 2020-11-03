@@ -36,6 +36,7 @@ static s32 initrd_readdir(Vfs_Node* vfs_node, u32 index, Vfs_Dirent* dirent) {
 }
 
 static Vfs_Node* initrd_lookup(Vfs_Node* vfs_node, const s8* path) {
+	assert(vfs_node == initrd_root_node, "initrd_lookup called for node that is not the root node");
 	if (vfs_node == initrd_root_node) {
 		for (u32 i = 0; i < num_files; ++i) {
 			Vfs_Node* node = &initrd_files_nodes[i];

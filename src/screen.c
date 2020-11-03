@@ -16,10 +16,7 @@ typedef struct {
 static Screen screen;
 
 void screen_print_char(s8 c) {
-	s8 buf[2];
-	buf[0] = c;
-	buf[1] = 0;
-	screen_print(buf);
+	screen_print_with_len(&c, 1);
 }
 
 static void screen_print_nibble(u8 nibble) {
@@ -106,10 +103,12 @@ static void shift_one_line_up() {
 
 // Print a nul-terminated string to the screen, starting at the current cursor position
 void screen_print(const s8* str) {
-	s8 c;
-	s32 i = 0;
-	while ((c = str[i]) != '\0') {
-		++i;
+	screen_print_with_len(str, strlen(str));
+}
+
+void screen_print_with_len(const s8* str, u32 str_len) {
+	for (u32 i = 0; i < str_len; ++i) {
+		s8 c = str[i];
 
 		if (c == '\n') {
 			// If the string has a \n, we artificially break the line

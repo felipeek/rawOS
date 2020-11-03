@@ -10,7 +10,7 @@ void strcpy(s8* dst, const s8* src) {
 	dst[i] = 0;
 }
 
-s32 strlen(s8* str) {
+u32 strlen(const s8* str) {
 	s32 len = 0;
 	while (str[len]) ++len;
 	return len;

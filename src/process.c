@@ -37,7 +37,9 @@ void process_init() {
 	interrupt_disable();
 	interrupt_register_handler(general_protection_fault_interrupt_handler, ISR13);
 
-	Vfs_Node* rawx_node = vfs_lookup(vfs_root, INITIAL_PROCESS);
+	Vfs_Node* initrd_node = vfs_lookup(vfs_root, "initrd");
+	assert(initrd_node != 0, "Unable to initialize first process! initrd folder not found!");
+	Vfs_Node* rawx_node = vfs_lookup(initrd_node, INITIAL_PROCESS);
 	assert(rawx_node != 0, "Unable to initialize first process! File %s was not found!", INITIAL_PROCESS);
 
 	// Here we need to load the bash process and start it.
