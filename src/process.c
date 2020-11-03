@@ -9,8 +9,9 @@
 #include "util/util.h"
 #include "rawx.h"
 #include "fs/vfs.h"
+#include "interrupt.h"
 
-#define INITIAL_PROCESS "rawos_exit.rawx"
+#define INITIAL_PROCESS "rawos_print.rawx"
 
 typedef struct Process {
 	u32 pid;
@@ -26,9 +27,15 @@ typedef struct Process {
 static u32 current_pid = 1;
 Process* active_process = 0;
 
+static void general_protection_fault_interrupt_handler(Interrupt_Handler_Args* args) {
+	printf("General protection fault: process is doing some nasty stuff... for now, just kill it.\n");
+	process_exit(255);
+}
+
 void process_init() {
 	// We start by disabling interrupts
 	interrupt_disable();
+	interrupt_register_handler(general_protection_fault_interrupt_handler, ISR13);
 
 	Vfs_Node* rawx_node = vfs_lookup(vfs_root, INITIAL_PROCESS);
 	assert(rawx_node != 0, "Unable to initialize first process! File %s was not found!", INITIAL_PROCESS);

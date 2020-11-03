@@ -4,6 +4,7 @@
 #include "asm/interrupt.h"
 #include "timer.h"
 #include "util/printf.h"
+#include "util/util.h"
 
 #define PIC1 0x20                   // IO port for master PIC
 #define PIC2 0xA0                   // IO port for slave PIC
@@ -378,7 +379,7 @@ void isr_handler(Interrupt_Handler_Args args) {
 	if (interrupt_handler) {
 		interrupt_handler(&args);
 	} else {
-		printf("ISR Handler called for unhandled INT number: %u\n", args.int_no);
+		printf("ISR Handler called for unhandled INT number: ISR%u\n", args.int_no);
 	}
 }
 
@@ -398,6 +399,6 @@ void irq_handler(Interrupt_Handler_Args args) {
 	if (interrupt_handler) {
 		interrupt_handler(&args);
 	} else {
-		printf("IRQ Handler called for unhandled INT number: %u\n", args.int_no);
+		printf("IRQ Handler called for unhandled INT number: IRQ%u\n", args.int_no);
 	}
 }
