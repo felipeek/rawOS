@@ -5,6 +5,8 @@
 #include "asm/syscall_stubs.h"
 #include "process.h"
 #include "screen.h"
+#include "fs/util.h"
+#include "fs/vfs.h"
 
 Hash_Map syscall_stubs;
 
@@ -14,6 +16,10 @@ static const s8 POS_CURSOR_SYSCALL_NAME[] = "pos_cursor";
 static const s8 CLEAR_SCREEN_SYSCALL_NAME[] = "clear_screen";
 static const s8 EXECVE_SYSCALL_NAME[] = "execve";
 static const s8 EXIT_SYSCALL_NAME[] = "exit";
+static const s8 OPEN_SYSCALL_NAME[] = "open";
+static const s8 READ_SYSCALL_NAME[] = "read";
+static const s8 WRITE_SYSCALL_NAME[] = "write";
+static const s8 CLOSE_SYSCALL_NAME[] = "close";
 
 // Compares two keys. Needs to return 1 if the keys are equal, 0 otherwise.
 static s32 syscall_stub_name_compare(const void* _key1, const void* _key2) {
@@ -59,6 +65,52 @@ static void syscall_handler(Interrupt_Handler_Args* args) {
 			// fork syscall
 			args->eax = process_fork();
 		} break;
+		case 6: {
+			// open syscall
+			const s8* path = (const s8*)args->ebx;
+			Vfs_Node* node = fs_util_get_node_by_path(path);
+			if (node) {
+				vfs_open(node, 0);
+				args->eax = process_add_fd_to_active_process(node);
+			} else {
+				args->eax = -1;
+			}
+		} break;
+		case 7: {
+			// read syscall
+			s32 fd = (s32)args->ebx;
+			u8* buf = (u8*)args->ecx;
+			u32 count = args->edx;
+			Vfs_Node* node = process_get_node_of_fd_of_active_process(fd);
+			if (node) {
+				args->eax = vfs_read(node, 0, count, buf);
+			} else {
+				args->eax = -1;
+			}
+		} break;
+		case 8: {
+			// write syscall
+			s32 fd = (s32)args->ebx;
+			u8* buf = (u8*)args->ecx;
+			u32 count = args->edx;
+			Vfs_Node* node = process_get_node_of_fd_of_active_process(fd);
+			if (node) {
+				args->eax = vfs_write(node, 0, count, buf);
+			} else {
+				args->eax = -1;
+			}
+		} break;
+		case 9: {
+			// close syscall
+			s32 fd = (s32)args->ebx;
+			Vfs_Node* node = process_get_node_of_fd_of_active_process(fd);
+			if (node) {
+				vfs_close(node);
+				args->eax = 0;
+			} else {
+				args->eax = -1;
+			}
+		} break;
 	}
 }
 
@@ -94,6 +146,22 @@ void syscall_init() {
 	ssi.syscall_stub_address = (u32)syscall_fork_stub;
 	ssi.syscall_stub_size = syscall_fork_stub_size;
 	syscall_name = FORK_SYSCALL_NAME;
+	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
+	ssi.syscall_stub_address = (u32)syscall_open_stub;
+	ssi.syscall_stub_size = syscall_open_stub_size;
+	syscall_name = OPEN_SYSCALL_NAME;
+	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
+	ssi.syscall_stub_address = (u32)syscall_read_stub;
+	ssi.syscall_stub_size = syscall_read_stub_size;
+	syscall_name = READ_SYSCALL_NAME;
+	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
+	ssi.syscall_stub_address = (u32)syscall_write_stub;
+	ssi.syscall_stub_size = syscall_write_stub_size;
+	syscall_name = WRITE_SYSCALL_NAME;
+	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
+	ssi.syscall_stub_address = (u32)syscall_close_stub;
+	ssi.syscall_stub_size = syscall_close_stub_size;
+	syscall_name = CLOSE_SYSCALL_NAME;
 	hash_map_put(&syscall_stubs, &syscall_name, &ssi);
 	interrupt_register_handler(syscall_handler, ISR128);
 }

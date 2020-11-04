@@ -3,6 +3,7 @@
 #include "../util/util.h"
 #include "../alloc/kalloc.h"
 #include "../keyboard.h"
+#include "../util/printf.h"
 
 #define SCREEN_FILE_NAME "screen"
 #define KEYBOARD_FILE_NAME "keyboard"

@@ -17,6 +17,15 @@ global interrupt_disable
 	jmp isr_common_stub
 %endmacro
 
+%macro ISR_NOERRCODE_NO_CLI 1
+	global interrupt_isr%1
+	interrupt_isr%1:
+	cli
+	push byte 0
+	push %1
+	jmp isr_common_stub_no_cli
+%endmacro
+
 ; Declare a common ISR for interruptions that PROVIDE an error code
 ; The interruption number is passed as a stack parameter
 ; Note that the processor just calls the ISR without identifying the interruption,
@@ -39,16 +48,21 @@ global interrupt_disable
 %endmacro
 
 ; This code block is called by all ISRs. 
-; @TODO: Here, in this function, we will do the swap between user-space and kernel-space.
-; Currently, the GDT has only ring-0 segments, so we don't need to do it.
-; When we do it, we need to modify all segment registers (ds, es, fs, gs) to move to kernel-space
-; And restore them to the user-space segments before calling iret.
 isr_common_stub:
 	pusha               ; Push all the registers to the stack, so the isr_handler can have access to them.
 	call isr_handler    ; Call the high-level handler to handle the interruption
 	popa                ; Clear the stack.
 	add esp, 8          ; Cleans up the pushed error code and pushed ISR number
 	sti                 ; re-enables interruptions
+	iret                ; return from interruption
+
+; This code block is called by all ISRs. 
+isr_common_stub_no_cli:
+	sti
+	pusha               ; Push all the registers to the stack, so the isr_handler can have access to them.
+	call isr_handler    ; Call the high-level handler to handle the interruption
+	popa                ; Clear the stack.
+	add esp, 8          ; Cleans up the pushed error code and pushed ISR number
 	iret                ; return from interruption
 
 ; The irq_common_stub is identical to the isr_common_stub, the only difference is that we need to call the irq_handler.
@@ -196,7 +210,7 @@ ISR_NOERRCODE 124
 ISR_NOERRCODE 125
 ISR_NOERRCODE 126
 ISR_NOERRCODE 127
-ISR_NOERRCODE 128
+ISR_NOERRCODE_NO_CLI 128
 ISR_NOERRCODE 129
 ISR_NOERRCODE 130
 ISR_NOERRCODE 131

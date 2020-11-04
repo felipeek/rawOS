@@ -71,8 +71,6 @@ void main() {
 	syscall_init();
 	vfs_init();
 
-	read_folder(vfs_root);
-
 	printf("Kernel initialization completed.\n");
 	printf("Starting processes and switching to user-mode...\n");
 

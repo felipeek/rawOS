@@ -1,7 +1,7 @@
 #ifndef RAW_OS_FS_VFS_H
 #define RAW_OS_FS_VFS_H
 #include "../common.h"
-#define FILE_NAME_MAX_LENGTH 256
+#define VFS_FILE_NAME_MAX_LENGTH 256
 
 #define VFS_FILE 0x01
 #define VFS_DIRECTORY 0x02
@@ -22,12 +22,12 @@ typedef s32 (*Vfs_Readdir)(struct Vfs_Node* vfs_node, u32 index, struct Vfs_Dire
 typedef struct Vfs_Node* (*Vfs_Lookup)(struct Vfs_Node* vfs_node, const s8* path);
 
 typedef struct Vfs_Dirent {
-	s8 name[FILE_NAME_MAX_LENGTH];
+	s8 name[VFS_FILE_NAME_MAX_LENGTH];
 	u32 inode;
 } Vfs_Dirent;
 
 typedef struct Vfs_Node {
-	s8 name[FILE_NAME_MAX_LENGTH];
+	s8 name[VFS_FILE_NAME_MAX_LENGTH];
 	u32 flags;
 	u32 inode;
 	u32 size;

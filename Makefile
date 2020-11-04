@@ -46,7 +46,7 @@ $(BUILD_DIR)/initrd.o: $(BUILD_DIR)/initrd.img
 	objcopy -B i386 -I binary -O elf32-i386 $^ $@
 
 $(BUILD_DIR)/initrd.img: $(BUILD_DIR)/ramdisk/writer
-	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/rawos_print.rawx rawos_print.rawx $(RES_DIR)/rawos_cursor.rawx rawos_cursor.rawx $(RES_DIR)/rawos_execve.rawx rawos_execve.rawx $(RES_DIR)/rawos_fork_3.rawx rawos_fork_3.rawx $(RES_DIR)/rawos_exit.rawx rawos_exit.rawx
+	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/rawos_print.rawx rawos_print.rawx $(RES_DIR)/rawos_cursor.rawx rawos_cursor.rawx $(RES_DIR)/rawos_execve.rawx rawos_execve.rawx $(RES_DIR)/rawos_fork_3.rawx rawos_fork_3.rawx $(RES_DIR)/rawos_exit.rawx rawos_exit.rawx $(RES_DIR)/rawos_files.rawx rawos_files.rawx
 
 read_initrd: $(BUILD_DIR)/ramdisk/reader
 	$(BUILD_DIR)/ramdisk/reader true

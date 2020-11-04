@@ -3,6 +3,7 @@
 #include "dev.h"
 #include "../util/util.h"
 #include "../alloc/kalloc.h"
+#include "../util/printf.h"
 
 #define NUM_ROOT_NODES 2
 Vfs_Node* vfs_root = 0;

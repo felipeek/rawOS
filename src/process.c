@@ -8,10 +8,11 @@
 #include "asm/paging.h"
 #include "util/util.h"
 #include "rawx.h"
-#include "fs/vfs.h"
 #include "interrupt.h"
+#include "hash_map.h"
 
-#define INITIAL_PROCESS "rawos_print.rawx"
+#define PROCESS_FILE_DESCRIPTORS_HASH_MAP_INITIAL_CAP 16
+#define INITIAL_PROCESS "rawos_files.rawx"
 
 typedef struct Process {
 	u32 pid;
@@ -20,12 +21,25 @@ typedef struct Process {
 	u32 eip;							// process instruction pointer
 	Page_Directory* page_directory;		// the page directory of this process
 
+	Hash_Map file_descriptors;
+	s32 fd_next;
 	struct Process* previous;
 	struct Process* next;
 } Process;
 
 static u32 current_pid = 1;
 Process* active_process = 0;
+
+s32 file_descriptor_compare(const void *key1, const void *key2) {
+	s32 fd1 = *(s32*)key1;
+	s32 fd2 = *(s32*)key2;
+	return fd1 == fd2;
+}
+
+u32 file_descriptor_hash(const void *key) {
+	s32 fd = *(s32*)key;
+	return (u32)fd;
+}
 
 static void general_protection_fault_interrupt_handler(Interrupt_Handler_Args* args) {
 	printf("General protection fault: process is doing some nasty stuff... for now, just kill it.\n");
@@ -45,6 +59,9 @@ void process_init() {
 	// Here we need to load the bash process and start it.
 	// For now, let's load a fake process.
 	active_process = kalloc_alloc(sizeof(Process));
+	hash_map_create(&active_process->file_descriptors, PROCESS_FILE_DESCRIPTORS_HASH_MAP_INITIAL_CAP, sizeof(s32), sizeof(Vfs_Node*),
+		file_descriptor_compare, file_descriptor_hash);
+	active_process->fd_next = 0;
 	active_process->previous = active_process;
 	active_process->next = active_process;
 	active_process->pid = current_pid++;
@@ -88,6 +105,10 @@ void process_init() {
 
 s32 process_fork() {
 	Process* new_process = kalloc_alloc(sizeof(Process));
+
+	// @TODO: fork file descriptors aswell
+	// hash_map_create(&active_process->file_descriptors, PROCESS_FILE_DESCRIPTORS_HASH_MAP_INITIAL_CAP, sizeof(s32), sizeof(Vfs_Node*),
+	//		file_descriptor_compare, file_descriptor_hash);
 
 	// Add the new process to the process list.
 	Process* previous = active_process->previous;
@@ -241,4 +262,21 @@ void process_link_kernel_table_to_all_address_spaces(u32 page_table_virtual_addr
 		current_process_page_directory->tables_x86_representation[page_table_index] = page_table_x86_representation;
 		current_process = current_process->next;
 	} while (current_process != active_process);
+}
+
+s32 process_add_fd_to_active_process(Vfs_Node* node) {
+	s32 fd = active_process->fd_next++;
+	assert(hash_map_put(&active_process->file_descriptors, &fd, &node) == 0, "There was an error adding fd to process");
+	return fd;
+}
+
+void process_remove_fd_from_active_process(s32 fd) {
+}
+
+Vfs_Node* process_get_node_of_fd_of_active_process(s32 fd) {
+	Vfs_Node* node;
+	if (hash_map_get(&active_process->file_descriptors, &fd, &node)) {
+		return 0;
+	}
+	return node;
 }

@@ -7,7 +7,7 @@ extern u8 _initrd_data_size[] asm("_binary_bin_initrd_img_size");
 extern u8 _initrd_data_end[]  asm("_binary_bin_initrd_img_end");
 
 typedef struct {
-	s8 file_name[FILE_NAME_MAX_LENGTH];
+	s8 file_name[VFS_FILE_NAME_MAX_LENGTH];
 	u32 file_size;
 } Ramdisk_Header;
 
