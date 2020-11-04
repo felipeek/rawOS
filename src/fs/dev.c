@@ -2,13 +2,29 @@
 #include "../screen.h"
 #include "../util/util.h"
 #include "../alloc/kalloc.h"
+#include "../keyboard.h"
 
 #define SCREEN_FILE_NAME "screen"
+#define KEYBOARD_FILE_NAME "keyboard"
 
 Vfs_Node* dev_root_node;
 Vfs_Node* screen_node;
+Vfs_Node* keyboard_node;
 
 static s32 dev_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf) {
+	if (vfs_node == keyboard_node) {
+		Keyboard_Event_Receiver_Buffer kerb;
+		kerb.buffer = buf;
+		kerb.event_received = 0;
+		kerb.buffer_filled = 0;
+		kerb.buffer_capacity = size;
+		keyboard_register_event_buffer(&kerb);
+
+		// spin-lock
+		while (!kerb.event_received);
+
+		return kerb.buffer_filled;
+	}
 	return 0;
 }
 
@@ -25,6 +41,10 @@ static s32 dev_readdir(Vfs_Node* vfs_node, u32 index, Vfs_Dirent* dirent) {
 		strcpy(dirent->name, SCREEN_FILE_NAME);
 		dirent->inode = 1;
 		return 0;
+	} else if (index == 1) {
+		strcpy(dirent->name, KEYBOARD_FILE_NAME);
+		dirent->inode = 2;
+		return 0;
 	}
 	return -1;
 }
@@ -33,6 +53,8 @@ static Vfs_Node* dev_lookup(Vfs_Node* vfs_node, const s8* path) {
 	if (vfs_node == dev_root_node) {
 		if (!strcmp(path, SCREEN_FILE_NAME)) {
 			return screen_node;
+		} else if (!strcmp(path, KEYBOARD_FILE_NAME)) {
+			return keyboard_node;
 		}
 	}
 	return 0;
@@ -62,6 +84,18 @@ Vfs_Node* dev_init() {
 	screen_node->lookup = 0;
 	screen_node->inode = 0;
 	screen_node->size = 0;
+
+	keyboard_node = kalloc_alloc(sizeof(Vfs_Node));
+	keyboard_node->flags = VFS_FILE;
+	strcpy(keyboard_node->name, KEYBOARD_FILE_NAME);
+	keyboard_node->close = 0;
+	keyboard_node->open = 0;
+	keyboard_node->read = dev_read;
+	keyboard_node->write = 0;
+	keyboard_node->readdir = 0;
+	keyboard_node->lookup = 0;
+	keyboard_node->inode = 0;
+	keyboard_node->size = 0;
 
 	return dev_root_node;
 }
