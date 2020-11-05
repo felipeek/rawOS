@@ -2,6 +2,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <libgen.h>
 #include "ramdisk.h"
 
 /*
@@ -48,7 +49,7 @@ s32 main(s32 argc, s8** argv) {
 		return 1;
 	}
 
-	u32 num_files = (argc - 1) / 2;
+	u32 num_files = (argc - 1);
 
 	FILE* output_file = fopen(INITRD_OUTPUT_FILE, "wb");
 	if (!output_file) {
@@ -63,14 +64,15 @@ s32 main(s32 argc, s8** argv) {
 	for (u32 i = 0; i < num_files; ++i) {
 		Ramdisk_Header current_header;
 
-		FILE* file = fopen(argv[i * 2 + 1], "rb");
+		FILE* file = fopen(argv[i + 1], "rb");
 		if (!file) {
-			fprintf(stderr, "error opening file %s: %s\n", argv[i * 2 + 1], strerror(errno));
+			fprintf(stderr, "error opening file %s: %s\n", argv[i + 1], strerror(errno));
 			return 1;
 		}
 		fseek(file, 0, SEEK_END);
 		current_header.file_size = ftell(file);
-		strcpy(current_header.file_name, argv[i * 2 + 2]);
+		s8* filename = basename(argv[i + 1]);
+		strcpy(current_header.file_name, filename);
 		fclose(file);
 
 		if (file_is_not_in_root_folder(current_header.file_name)) {
@@ -84,14 +86,14 @@ s32 main(s32 argc, s8** argv) {
 	fwrite(headers, sizeof(Ramdisk_Header), num_files, output_file);
 
 	for (u32 i = 0; i < num_files; ++i) {
-		FILE* file = fopen(argv[i * 2 + 1], "rb");
+		FILE* file = fopen(argv[i + 1], "rb");
 		if (!file) {
-			fprintf(stderr, "error opening file %s: %s\n", argv[i * 2 + 1], strerror(errno));
+			fprintf(stderr, "error opening file %s: %s\n", argv[i + 1], strerror(errno));
 			return 1;
 		}
 		s8* file_content = malloc(headers[i].file_size);
 		if (!file_content) {
-			fprintf(stderr, "error allocating memory to store contents of file %s: %s\n", argv[i * 2 + 1], strerror(errno));
+			fprintf(stderr, "error allocating memory to store contents of file %s: %s\n", argv[i + 1], strerror(errno));
 			return 1;
 		}
 		fread(file_content, headers[i].file_size, 1, file);

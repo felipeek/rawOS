@@ -1,15 +1,21 @@
 CC = gcc
+LIGHTC = light
 CFLAGS = -ffreestanding -m32 -fno-pie
 BIN = rawOS
 BUILD_DIR = ./bin
 RES_DIR = ./res
+APP_DIR = ./app
 
 # List of all .c source files.
 C = $(wildcard ./src/*.c) $(wildcard ./src/alloc/*.c) $(wildcard ./src/util/*.c) $(wildcard ./src/fs/*.c)
 # List of all .asm source files.
 ASM = $(wildcard ./src/*.asm) $(wildcard ./src/asm/*.asm)
+# List of all .li source files.
+LIGHT = $(APP_DIR)/shell.li $(APP_DIR)/test.li
 # All .o files go to build dir.
 OBJ = $(C:%.c=$(BUILD_DIR)/%.o) $(ASM:%.asm=$(BUILD_DIR)/%.o) $(BUILD_DIR)/initrd.o
+# All .rawx files go to res dir
+RAWX = $(LIGHT:$(APP_DIR)/%.li=$(RES_DIR)/%.rawx)
 # Gcc/Clang will create these .d files containing dependencies.
 DEP = $(OBJ:%.o=%.d)
 
@@ -45,8 +51,8 @@ $(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/src/asm/kernel_entry.o $(OBJ)
 $(BUILD_DIR)/initrd.o: $(BUILD_DIR)/initrd.img
 	objcopy -B i386 -I binary -O elf32-i386 $^ $@
 
-$(BUILD_DIR)/initrd.img: $(BUILD_DIR)/ramdisk/writer
-	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/shell.rawx shell.rawx $(RES_DIR)/rawos_print.rawx rawos_print.rawx $(RES_DIR)/rawos_execve.rawx rawos_execve.rawx
+$(BUILD_DIR)/initrd.img: $(BUILD_DIR)/ramdisk/writer $(RAWX)
+	$(BUILD_DIR)/ramdisk/writer $(RAWX)
 
 read_initrd: $(BUILD_DIR)/ramdisk/reader
 	$(BUILD_DIR)/ramdisk/reader true
@@ -66,6 +72,13 @@ $(BUILD_DIR)/ramdisk/writer.o: ramdisk/writer.c
 $(BUILD_DIR)/ramdisk/reader.o: ramdisk/reader.c
 	mkdir -p $(@D)
 	$(CC) -c $< -o $@
+
+# Build target for every single object file.
+# The potential dependency on header files is covered
+# by calling `-include $(DEP)`.
+$(RES_DIR)/%.rawx : $(APP_DIR)/%.li
+	mkdir -p $(@D)
+	$(LIGHTC) $< -x86rawx -o $@
 
 ######
 

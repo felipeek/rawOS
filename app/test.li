@@ -1,0 +1,10 @@
+#import "rawos.li"
+
+HELLO_WORLD :: "Hello RawOS World!\n";
+
+main : () -> s32 {
+	stdout := open("/dev/screen\0".data);
+	write(stdout, HELLO_WORLD.data, HELLO_WORLD.length);
+	close(stdout);
+	return 0;
+}
