@@ -1,0 +1,36 @@
+#import "rawos.li"
+
+COMMAND_MAX_LENGTH :: 1024;
+SHELL_PREFIX :: "$ ";
+
+main : () -> s32 {
+	clear_screen();
+	stdout := open("/dev/screen\0".data);
+	stdin := open("/dev/keyboard\0".data);
+
+	if (stdout < 0 || stdin < 0) {
+		exit(1);
+	}
+
+	command : [COMMAND_MAX_LENGTH]u8;
+	command_size := 0;
+
+	write(stdout, SHELL_PREFIX.data, SHELL_PREFIX.length);
+
+	key : u8;
+	read_bytes := read(stdin, &key, 1);
+	while read_bytes > 0 && key != '\n' {
+		if (command_size < COMMAND_MAX_LENGTH) {
+			write(stdout, &key, 1);
+			command[command_size] = key;
+			command_size += 1;
+		}
+		read_bytes = read(stdin, &key, 1);
+	}
+
+	command[command_size] = '\0';
+
+	close(stdin);
+	close(stdout);
+	return 0;
+}

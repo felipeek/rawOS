@@ -12,7 +12,7 @@
 #include "hash_map.h"
 
 #define PROCESS_FILE_DESCRIPTORS_HASH_MAP_INITIAL_CAP 16
-#define INITIAL_PROCESS "rawos_files.rawx"
+#define INITIAL_PROCESS "shell.rawx"
 
 typedef struct Process {
 	u32 pid;

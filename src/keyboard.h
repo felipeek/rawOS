@@ -2,6 +2,9 @@
 #define RAW_OS_KEYBOARD_H
 #include "common.h"
 
+#define KEY_CODE_SHIFT 1
+#define KEY_CODE_CTRL 1
+
 typedef struct {
 	u8* buffer;
 	u32 buffer_capacity;

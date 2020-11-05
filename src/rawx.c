@@ -130,6 +130,5 @@ RawX_Load_Information rawx_load(u8* data, s32 length, Page_Directory* process_pa
 	}
 
 	rli.entrypoint = header->load_address + header->entry_point_offset;
-
     return rli;
 }
