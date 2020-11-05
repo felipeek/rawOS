@@ -59,7 +59,7 @@ static void syscall_handler(Interrupt_Handler_Args* args) {
 		} break;
 		case 4: {
 			// exceve syscall
-			process_execve((s8*)args->ebx);
+			args->eax = process_execve((s8*)args->ebx);
 		} break;
 		case 5: {
 			// fork syscall

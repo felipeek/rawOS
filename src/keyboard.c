@@ -43,6 +43,10 @@ static u8 get_key_character(u8 key_code) {
 		if (!keyboard_state.shift_enabled) {
 			key_code += 32;
 		}
+	} else if (key_code == '-') {
+		if (keyboard_state.shift_enabled) {
+			key_code = '_';
+		}
 	}
 	return key_code;
 }
@@ -125,6 +129,9 @@ void keyboard_init() {
 	keyboard_state.key_lookup_table[KEYBOARD_W_PRESS] = (Key_Information){ .key_code = 'W', .key_flags = KEY_CHARACTER | KEY_PRESS };
 	keyboard_state.key_lookup_table[KEYBOARD_Y_PRESS] = (Key_Information){ .key_code = 'Y', .key_flags = KEY_CHARACTER | KEY_PRESS };
 	keyboard_state.key_lookup_table[KEYBOARD_Z_PRESS] = (Key_Information){ .key_code = 'Z', .key_flags = KEY_CHARACTER | KEY_PRESS };
+	keyboard_state.key_lookup_table[KEYBOARD_FORWARD_SLASH_PRESS] = (Key_Information){ .key_code = '/', .key_flags = KEY_CHARACTER | KEY_PRESS };
+	keyboard_state.key_lookup_table[KEYBOARD_DASH_PRESS] = (Key_Information){ .key_code = '-', .key_flags = KEY_CHARACTER | KEY_PRESS };
+	keyboard_state.key_lookup_table[KEYBOARD_DOT_PRESS] = (Key_Information){ .key_code = '.', .key_flags = KEY_CHARACTER | KEY_PRESS };
 	keyboard_state.key_lookup_table[KEYBOARD_A_RELEASE] = (Key_Information){ .key_code = 'A', .key_flags = KEY_CHARACTER | KEY_RELEASE };
 	keyboard_state.key_lookup_table[KEYBOARD_B_RELEASE] = (Key_Information){ .key_code = 'B', .key_flags = KEY_CHARACTER | KEY_RELEASE };
 	keyboard_state.key_lookup_table[KEYBOARD_C_RELEASE] = (Key_Information){ .key_code = 'C', .key_flags = KEY_CHARACTER | KEY_RELEASE };
@@ -151,6 +158,9 @@ void keyboard_init() {
 	keyboard_state.key_lookup_table[KEYBOARD_W_RELEASE] = (Key_Information){ .key_code = 'W', .key_flags = KEY_CHARACTER | KEY_RELEASE };
 	keyboard_state.key_lookup_table[KEYBOARD_Y_RELEASE] = (Key_Information){ .key_code = 'Y', .key_flags = KEY_CHARACTER | KEY_RELEASE };
 	keyboard_state.key_lookup_table[KEYBOARD_Z_RELEASE] = (Key_Information){ .key_code = 'Z', .key_flags = KEY_CHARACTER | KEY_RELEASE };
+	keyboard_state.key_lookup_table[KEYBOARD_FORWARD_SLASH_RELEASE] = (Key_Information){ .key_code = '/', .key_flags = KEY_CHARACTER | KEY_RELEASE };
+	keyboard_state.key_lookup_table[KEYBOARD_DASH_RELEASE] = (Key_Information){ .key_code = '.', .key_flags = KEY_CHARACTER | KEY_RELEASE };
+	keyboard_state.key_lookup_table[KEYBOARD_DOT_RELEASE] = (Key_Information){ .key_code = '-', .key_flags = KEY_CHARACTER | KEY_RELEASE };
 	keyboard_state.key_lookup_table[KEYBOARD_ENTER_PRESS] = (Key_Information){ .key_code = '\n', .key_flags = KEY_CHARACTER | KEY_PRESS };
 	keyboard_state.key_lookup_table[KEYBOARD_ENTER_RELEASE] = (Key_Information){ .key_code = '\n', .key_flags = KEY_CHARACTER | KEY_RELEASE };
 	keyboard_state.key_lookup_table[KEYBOARD_SPACE_PRESS] = (Key_Information){ .key_code = ' ', .key_flags = KEY_CHARACTER | KEY_PRESS };

@@ -46,7 +46,7 @@ $(BUILD_DIR)/initrd.o: $(BUILD_DIR)/initrd.img
 	objcopy -B i386 -I binary -O elf32-i386 $^ $@
 
 $(BUILD_DIR)/initrd.img: $(BUILD_DIR)/ramdisk/writer
-	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/shell.rawx shell.rawx
+	$(BUILD_DIR)/ramdisk/writer $(RES_DIR)/shell.rawx shell.rawx $(RES_DIR)/rawos_print.rawx rawos_print.rawx $(RES_DIR)/rawos_execve.rawx rawos_execve.rawx
 
 read_initrd: $(BUILD_DIR)/ramdisk/reader
 	$(BUILD_DIR)/ramdisk/reader true

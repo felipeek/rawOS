@@ -10,6 +10,7 @@
 #include "rawx.h"
 #include "interrupt.h"
 #include "hash_map.h"
+#include "fs/util.h"
 
 #define PROCESS_FILE_DESCRIPTORS_HASH_MAP_INITIAL_CAP 16
 #define INITIAL_PROCESS "shell.rawx"
@@ -104,6 +105,7 @@ void process_init() {
 }
 
 s32 process_fork() {
+	interrupt_disable();
 	Process* new_process = kalloc_alloc(sizeof(Process));
 
 	// @TODO: fork file descriptors aswell
@@ -130,6 +132,8 @@ s32 process_fork() {
 
 		// Clone our page directory for the child
 		new_process->page_directory = paging_clone_page_directory_for_new_process(active_process->page_directory);
+		// @TODO: copy this, not link
+		new_process->file_descriptors = active_process->file_descriptors;
 
 		// Create kernel stack for process
 		// We copy the current kernel stack to the new kernel stack.
@@ -157,12 +161,16 @@ s32 process_fork() {
 	}
 }
 
-void process_execve(const s8* image_path) {
+s32 process_execve(const s8* image_path) {
 	// We start by disabling interrupts
 	interrupt_disable();
 
-	Vfs_Node* rawx_node = vfs_lookup(vfs_root, image_path);
-	assert(rawx_node != 0, "Unable to execve! File %s was not found!", image_path);
+	Vfs_Node* rawx_node = fs_util_get_node_by_path(image_path);
+	if (!rawx_node) {
+		printf("Unable to execve! File %s was not found!\n", image_path);
+		return -1;
+	}
+
 	u8* buffer = kalloc_alloc(rawx_node->size);
 	vfs_read(rawx_node, 0, rawx_node->size, buffer);
 
@@ -181,9 +189,11 @@ void process_execve(const s8* image_path) {
 	// Here, we basically force the switch to user-mode and we tell the processor to use the
 	// stack defined by active_process->esp and to jump to the address defined by active_process->eip.
 	process_switch_to_user_mode_set_stack_and_jmp_addr(active_process->esp, active_process->eip);
+	return 0;
 }
 
 void process_exit(u32 ret) {
+	interrupt_disable();
 	printf("Exiting from process %u with return value %u...\n", active_process->pid, ret);
 	paging_clean_all_non_kernel_pages_from_page_directory(active_process->page_directory);
 

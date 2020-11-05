@@ -2,7 +2,7 @@ print : (str : ^u8) -> void #extern("kernel");
 exit : (ret : s32) -> void #extern("kernel");
 pos_cursor : (x : u32, y : u32) -> void #extern("kernel");
 clear_screen : () -> void #extern("kernel");
-execve : (rawx_path : ^u8) -> void #extern("kernel");
+execve : (rawx_path : ^u8) -> s32 #extern("kernel");
 fork : () -> s32 #extern("kernel");
 open : (str : ^u8) -> s32 #extern("kernel");
 write : (fd : s32, buf : ^void, count : u32) -> s32 #extern("kernel");
