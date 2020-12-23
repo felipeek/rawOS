@@ -16,7 +16,7 @@ static void timer_interrupt_handler(Interrupt_Handler_Args* args) {
 	tick++;
 	if (tick % 100 == 0) {
 		//printf("A second has passed.\n");
-		process_switch();
+		process_switch(PROCESS_READY);
 	}
 }
 

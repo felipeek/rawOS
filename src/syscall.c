@@ -59,6 +59,7 @@ static void syscall_handler(Interrupt_Handler_Args* args) {
 		} break;
 		case 4: {
 			// exceve syscall
+			printf("Execve received with %s\n", args->ebx);
 			args->eax = process_execve((s8*)args->ebx);
 		} break;
 		case 5: {
@@ -93,6 +94,7 @@ static void syscall_handler(Interrupt_Handler_Args* args) {
 			s32 fd = (s32)args->ebx;
 			u8* buf = (u8*)args->ecx;
 			u32 count = args->edx;
+			buf[count] = 0;
 			Vfs_Node* node = process_get_node_of_fd_of_active_process(fd);
 			if (node) {
 				args->eax = vfs_write(node, 0, count, buf);

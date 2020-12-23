@@ -99,4 +99,4 @@ $(BUILD_DIR)/%.o : %.asm
 	nasm $< -f elf32 -o $@
 
 clean:
-	rm -r $(BUILD_DIR)
+	rm -r $(BUILD_DIR) $(RES_DIR)

@@ -10,6 +10,7 @@ typedef struct {
 	u32 buffer_capacity;
 	u32 buffer_filled;
 	u32 event_received;
+	u32 pid;
 } Keyboard_Event_Receiver_Buffer;
 
 void keyboard_init();

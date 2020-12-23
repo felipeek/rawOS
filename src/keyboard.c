@@ -4,6 +4,7 @@
 #include "keyboard_scancode_set_1.h"
 #include "util/printf.h"
 #include "util/util.h"
+#include "process.h"
 
 #define KEYBOARD_DATA_PORT 0x60                 // Read/Write port
 #define KEYBOARD_STATUS_REGISTER_PORT 0x64      // Read port
@@ -79,6 +80,7 @@ void keyboard_interrupt_handler(Interrupt_Handler_Args* args) {
 				memcpy(kerb->buffer, &out, sizeof(u8));
 				kerb->event_received = 1;
 				kerb->buffer_filled = sizeof(u8);
+				process_unblock(kerb->pid);
 			}
 
 			keyboard_state.keyboard_event_buffers_num = 0;

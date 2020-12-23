@@ -4,6 +4,7 @@
 #include "../alloc/kalloc.h"
 #include "../keyboard.h"
 #include "../util/printf.h"
+#include "../process.h"
 
 #define SCREEN_FILE_NAME "screen"
 #define KEYBOARD_FILE_NAME "keyboard"
@@ -14,17 +15,25 @@ Vfs_Node* keyboard_node;
 
 static s32 dev_read(Vfs_Node* vfs_node, u32 offset, u32 size, void* buf) {
 	if (vfs_node == keyboard_node) {
-		Keyboard_Event_Receiver_Buffer kerb;
-		kerb.buffer = buf;
-		kerb.event_received = 0;
-		kerb.buffer_filled = 0;
-		kerb.buffer_capacity = size;
-		keyboard_register_event_buffer(&kerb);
+		Keyboard_Event_Receiver_Buffer* kerb = kalloc_alloc(sizeof(Keyboard_Event_Receiver_Buffer));
+		kerb->buffer = kalloc_alloc(size);
+		kerb->event_received = 0;
+		kerb->buffer_filled = 0;
+		kerb->buffer_capacity = size;
+		kerb->pid = process_getpid();
+		//printf("dev: registering %u\n", kerb->pid);
+		keyboard_register_event_buffer(kerb);
 
 		// spin-lock
-		while (!kerb.event_received);
-
-		return kerb.buffer_filled;
+		//printf("(1) buf: %x! [%x]\n", kerb->buffer, *(s8*)kerb->buffer);
+		process_block_current();
+		//printf("(2) buf: %x! [%x]\n", kerb->buffer, *(s8*)kerb->buffer);
+		memcpy(buf, kerb->buffer, kerb->buffer_filled);
+		u32 filled = kerb->buffer_filled;
+		kalloc_free(kerb->buffer);
+		kalloc_free(kerb);
+		
+		return filled;
 	}
 	return 0;
 }
